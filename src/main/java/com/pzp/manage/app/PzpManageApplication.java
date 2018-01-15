@@ -1,0 +1,28 @@
+package com.pzp.manage.app;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * <p>Project: pzp-operation-manage-system</p>
+ * <p>Package: com.pzp.manage.app</p>
+ * <p>Title: </p>
+ * <p>Description: </p>
+ *
+ * @author guodong.li
+ * @version 1.0.0
+ * @date 2018/1/15 13:45 星期一
+ */
+@SpringBootApplication
+@ComponentScan(basePackages = {"com.pzp.manage.controller"})
+@Configuration
+public class PzpManageApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(PzpManageApplication.class, args);
+    }
+
+
+}
