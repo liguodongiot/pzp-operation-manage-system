@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC
+        "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.pzp.manage.dao.UserInfoMapper">
+
+    <select id="countUserInfo" resultType="java.lang.Integer">
+        <![CDATA[
+          SELECT COUNT(*) FROM user_info
+        ]]>
+    </select>
+
+
+    <update id="updateUserInfoById" parameterType="com.pzp.manage.bean.UserInfo">
+        update user_info
+        <set>
+            <if test="userInfo.id!=null">
+                id=#{userInfo.id},
+            </if>
+            <if test="userInfo.name!=null">
+                name=#{userInfo.name},
+            </if>
+            <if test="userInfo.age!=null">
+                age=#{userInfo.age},
+            </if>
+        </set>
+        where id=#{id}
+    </update>
+
+
+    <insert id="addUserInfo" parameterType="com.pzp.manage.bean.UserInfo">
+        insert into user_info values(null,#{name},#{age})
+    </insert>
+
+
+
+</mapper>

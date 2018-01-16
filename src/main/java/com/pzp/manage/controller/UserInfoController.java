@@ -98,12 +98,17 @@ public class UserInfoController {
     /**
      * 更新
      * http://localhost:8080/userInfo/updateById/1
+     *  {
+     *       "id": 1,
+     *       "name": "小明",
+     *       "age": 13
+     *  }
      * @param id
      * @param map
      * @return
      */
     @PutMapping(value = "/updateById/{id}")
-    public UserInfo updateUserInfoById(@PathVariable Integer id, @RequestBody Map<String,Object> map) {
+    public UserInfo updateUserInfoById(@PathVariable Integer id, @RequestBody Map<String,Object> map) throws Exception {
         UserInfo user = new UserInfo();
         BeanMap beanMap = BeanMap.create(user);
         beanMap.putAll(map);
@@ -115,14 +120,19 @@ public class UserInfoController {
     /**
      * 新增
      * http://localhost:8080/userInfo/addUserInfo
+     * {
+     *  "name": "33dongdong3",
+     *  "age": 333
+     * }
      * @param user
      * @return
      */
     @PostMapping(value = "/addUserInfo")
     public UserInfo addUserInfo(@RequestBody UserInfo user) {
-        List<UserInfo> userInfoList = UserInfoUtil.getUserInfo();
-        userInfoList.add(user);
-        return user;
+        //List<UserInfo> userInfoList = UserInfoUtil.getUserInfo();
+        //userInfoList.add(user);
+        //return user;
+        return userInfoService.addUserInfo(user);
     }
 
 

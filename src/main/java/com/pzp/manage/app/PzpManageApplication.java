@@ -25,30 +25,14 @@ import javax.sql.DataSource;
  * @version 1.0.0
  * @date 2018/1/15 13:45 星期一
  */
-@SpringBootApplication(exclude = {DataSourceAutoConfiguration.class})
+@SpringBootApplication
 @ComponentScan(basePackages = {"com.pzp.manage.controller","com.pzp.manage.service"})
-@MapperScan(basePackages = {"com.pzp.manage.mapper"})
+@MapperScan(basePackages = {"com.pzp.manage.dao"})
 @Configuration
-//开启事务
-@EnableTransactionManagement
-public class PzpManageApplication  {//implements TransactionManagementConfigurer
+public class PzpManageApplication  {
 
     public static void main(String[] args) {
         SpringApplication.run(PzpManageApplication.class, args);
     }
-//
-//    @Resource(name="txManager")
-//    private PlatformTransactionManager txManager;
-//
-//    @Bean(name = "txManager")
-//    public PlatformTransactionManager txManager(DataSource dataSource) {
-//        return new DataSourceTransactionManager(dataSource);
-//    }
-//
-//    @Override
-//    public PlatformTransactionManager annotationDrivenTransactionManager() {
-//        return txManager;
-//    }
-
 
 }
