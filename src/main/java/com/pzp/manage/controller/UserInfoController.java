@@ -2,9 +2,16 @@ package com.pzp.manage.controller;
 
 import com.pzp.manage.bean.UserInfo;
 import com.pzp.manage.util.UserInfoUtil;
+import org.springframework.beans.BeanUtils;
+import org.springframework.cglib.beans.BeanMap;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.beans.Transient;
 import java.util.List;
+import java.util.Map;
 
 /**
  * <p>Project: pzp-operation-manage-system</p>
@@ -47,6 +54,7 @@ public class UserInfoController {
 
 
     /**
+     * 查询
      * http://localhost:8080/userInfo/getById/1
      * @param id
      * @return
@@ -63,9 +71,65 @@ public class UserInfoController {
     }
 
 
+    /**
+     * 删除
+     * http://localhost:8080/userInfo/delById/1
+     * @param id
+     * @return
+     */
+    @DeleteMapping(value = "/delById/{id}")
+    public UserInfo delUserInfoById(@PathVariable("id") Integer id) {
+        List<UserInfo> userInfoList = UserInfoUtil.getUserInfo();
+        for (UserInfo userInfo : userInfoList) {
+            if (userInfo.getId().equals(id)) {
+                userInfoList.remove(userInfo);
+                return userInfo;
+            }
+        }
+        return null;
+    }
+
+
+    /**
+     * 更新
+     * http://localhost:8080/userInfo/updateById/1
+     * @param id
+     * @param map
+     * @return
+     */
+    @PutMapping(value = "/updateById/{id}")
+    public UserInfo updateUserInfoById(@PathVariable Integer id, @RequestBody Map<String,Object> map) {
+        UserInfo user = new UserInfo();
+        BeanMap beanMap = BeanMap.create(user);
+        beanMap.putAll(map);
+
+        List<UserInfo> userInfoList = UserInfoUtil.getUserInfo();
+        for (int i=0; i<userInfoList.size(); i++) {
+            UserInfo userInfo = userInfoList.get(i);
+            if (userInfo.getId().equals(id)) {
+                userInfoList.remove(i);
+                userInfoList.add(i, user);
+                //userInfoList.remove(100);
+                return userInfo;
+            }
+        }
+        return null;
+    }
 
 
 
+    /**
+     * 新增
+     * http://localhost:8080/userInfo/addUserInfo
+     * @param user
+     * @return
+     */
+    @PostMapping(value = "/addUserInfo")
+    public UserInfo addUserInfo(@RequestBody UserInfo user) {
+        List<UserInfo> userInfoList = UserInfoUtil.getUserInfo();
+        userInfoList.add(user);
+        return user;
+    }
 
 
 
