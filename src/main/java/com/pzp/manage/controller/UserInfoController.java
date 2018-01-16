@@ -1,8 +1,10 @@
 package com.pzp.manage.controller;
 
 import com.pzp.manage.bean.UserInfo;
+import com.pzp.manage.service.UserInfoService;
 import com.pzp.manage.util.UserInfoUtil;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cglib.beans.BeanMap;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
@@ -26,6 +28,9 @@ import java.util.Map;
 @RestController
 @RequestMapping("/userInfo")
 public class UserInfoController {
+
+    @Autowired
+    UserInfoService userInfoService;
 
     /**
      * http://localhost:8080/userInfo/list
@@ -102,18 +107,7 @@ public class UserInfoController {
         UserInfo user = new UserInfo();
         BeanMap beanMap = BeanMap.create(user);
         beanMap.putAll(map);
-
-        List<UserInfo> userInfoList = UserInfoUtil.getUserInfo();
-        for (int i=0; i<userInfoList.size(); i++) {
-            UserInfo userInfo = userInfoList.get(i);
-            if (userInfo.getId().equals(id)) {
-                userInfoList.remove(i);
-                userInfoList.add(i, user);
-                //userInfoList.remove(100);
-                return userInfo;
-            }
-        }
-        return null;
+        return userInfoService.updateUserInfoById(id, user);
     }
 
 
