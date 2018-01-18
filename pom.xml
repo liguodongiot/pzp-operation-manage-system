@@ -83,7 +83,26 @@
     </dependency>
   </dependencies>
 
+  <profiles>
+    <!-- 默认激活 -->
+    <profile>
+      <id>home</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <properties>
+        <profile.env>home</profile.env>
+      </properties>
+    </profile>
 
+    <profile>
+      <id>company</id>
+      <properties>
+        <profile.env>company</profile.env>
+      </properties>
+    </profile>
+
+  </profiles>
 
   <build>
     <finalName>pzp-all</finalName>
