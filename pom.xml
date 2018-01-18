@@ -41,6 +41,17 @@
         <version>3.2.5</version>
       </dependency>
 
+      <dependency>
+        <groupId>com.alibaba</groupId>
+        <artifactId>fastjson</artifactId>
+        <version>1.2.38</version>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>1.7.19</version>
+      </dependency>
+
     </dependencies>
   </dependencyManagement>
 
@@ -76,11 +87,20 @@
       <artifactId>mysql-connector-java</artifactId>
     </dependency>
 
-
+    <dependency>
+      <groupId>com.alibaba</groupId>
+      <artifactId>fastjson</artifactId>
+    </dependency>
     <dependency>
       <groupId>cglib</groupId>
       <artifactId>cglib</artifactId>
     </dependency>
+
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+
   </dependencies>
 
   <profiles>
