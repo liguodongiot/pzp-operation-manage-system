@@ -3,15 +3,10 @@ package com.pzp.manage.controller;
 import com.pzp.manage.bean.UserInfo;
 import com.pzp.manage.service.UserInfoService;
 import com.pzp.manage.util.UserInfoUtil;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cglib.beans.BeanMap;
-import org.springframework.transaction.annotation.Isolation;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
-import java.beans.Transient;
 import java.util.List;
 import java.util.Map;
 

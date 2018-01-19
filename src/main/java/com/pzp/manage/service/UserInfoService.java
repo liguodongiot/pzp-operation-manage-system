@@ -20,7 +20,6 @@ import java.util.List;
  * @date 2018/1/16 18:12 星期二
  */
 @Service
-
 public class UserInfoService {
 
     @Autowired
