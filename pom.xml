@@ -144,16 +144,23 @@
                   <target>1.7</target>
               </configuration>
           </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-surefire-plugin</artifactId>
-          <configuration>
-            <runOrder>alphabetical</runOrder>
-            <systemPropertyVariables>
-              <spring.profiles.active>${profile.env}</spring.profiles.active>
-            </systemPropertyVariables>
-          </configuration>
-        </plugin>
+          <!--
+          surefire 插件用来在maven构建生命周期的test phase执行一个应用的单元测试。
+          它会产生两种不同形式的测试结果报告：1.纯文本 2.xml文件格式的
+          默认情况下，这些文件生成在工程的${basedir}/target/surefire-reports，
+          目录下（basedir指的是pom文件所在的目录）。
+          它可以运行任何testNG,Junit,pojo写的单元测试
+          -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <runOrder>alphabetical</runOrder>
+              <systemPropertyVariables>
+                <spring.profiles.active>${profile.env}</spring.profiles.active>
+              </systemPropertyVariables>
+            </configuration>
+          </plugin>
       </plugins>
   </build>
 
