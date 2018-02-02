@@ -127,7 +127,9 @@ public class UserInfoController {
         //List<UserInfo> userInfoList = UserInfoUtil.getUserInfo();
         //userInfoList.add(user);
         //return user;
-        return userInfoService.addUserInfo(user);
+
+        //return userInfoService.addUserInfo(user);
+        return user;
     }
 
 
