@@ -3,6 +3,7 @@ package com.pzp.manage.app;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.web.servlet.ServletComponentScan;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
@@ -20,6 +21,7 @@ import org.springframework.context.annotation.Configuration;
 @ComponentScan(basePackages = {"com.pzp.manage.controller","com.pzp.manage.service","com.pzp.manage.setting"})
 @MapperScan(basePackages = {"com.pzp.manage.dao"})
 @Configuration
+@ServletComponentScan("com.pzp.manage")
 public class PzpManageApplication  {
 
     public static void main(String[] args) {
