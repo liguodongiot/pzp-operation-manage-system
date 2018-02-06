@@ -33,17 +33,6 @@ public class DemoController {
         return "hello: "+name;
     }
 
-    // http://localhost:8888/demo/index?name=li
-    @RequestMapping(value = "/index")
-    public ModelAndView index(HttpServletRequest request,
-                              HttpServletResponse response,
-                              String name) {
-        LOGGER.info("session: "+request.getSession().getId());
-
-        ModelAndView modelAndView = new ModelAndView("index");
-        modelAndView.addObject("name",name);
-        return modelAndView;
-    }
 
 
 

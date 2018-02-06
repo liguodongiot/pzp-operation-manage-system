@@ -24,11 +24,11 @@ public class MySessionListener implements HttpSessionListener {
 
     @Override
     public void sessionCreated(HttpSessionEvent se) {
-        LOGGER.info("Session 被创建");
+        LOGGER.info("Session被创建, SessionId:{}。",se.getSession().getId());
     }
 
     @Override
     public void sessionDestroyed(HttpSessionEvent se) {
-        LOGGER.info("Session 被销毁");
+        LOGGER.info("Session 被销毁, SessionId:{}。", se.getSession().getId());
     }
 }
