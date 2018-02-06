@@ -1,8 +1,14 @@
 package com.pzp.manage.controller;
 
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import com.pzp.manage.filter.CommonFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.ModelAndView;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 /**
  * <p>Project: pzp-operation-manage-system</p>
@@ -14,18 +20,30 @@ import org.springframework.web.bind.annotation.RestController;
  * @version 1.0.0
  * @date 2018/1/15 13:44 星期一
  */
-@RestController
+@Controller
 @RequestMapping("/demo")
 public class DemoController {
-    // /demo/hello?name=li
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(DemoController.class);
+
+    // http://localhost:8888/demo/hello?name=li
     @RequestMapping(value = "/hello", method = RequestMethod.GET)
+    @ResponseBody
     public String hello(String name) {
         return "hello: "+name;
     }
 
+    // http://localhost:8888/demo/index?name=li
+    @RequestMapping(value = "/index")
+    public ModelAndView index(HttpServletRequest request,
+                              HttpServletResponse response,
+                              String name) {
+        LOGGER.info("session: "+request.getSession().getId());
 
-    
-
+        ModelAndView modelAndView = new ModelAndView("index");
+        modelAndView.addObject("name",name);
+        return modelAndView;
+    }
 
 
 

@@ -1,6 +1,6 @@
 package com.pzp.manage.test;
 
-import com.pzp.manage.app.PzpManageApplication;
+import com.pzp.manage.PzpManageApplication;
 import com.pzp.manage.profile.ProfilesResolver;
 import org.junit.Assert;
 import org.junit.Before;

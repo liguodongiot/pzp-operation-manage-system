@@ -1,7 +1,7 @@
 package com.pzp.manage.test;
 
 import com.alibaba.fastjson.JSONObject;
-import com.pzp.manage.app.PzpManageApplication;
+import com.pzp.manage.PzpManageApplication;
 import com.pzp.manage.bean.UserInfo;
 import org.junit.Assert;
 import org.junit.Before;

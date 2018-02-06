@@ -1,6 +1,5 @@
 package com.pzp.manage.listener;
 
-import com.pzp.manage.filter.CommonFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,9 +18,9 @@ import javax.servlet.http.HttpSessionListener;
  * @date 2018/2/5 20:35 星期一
  */
 @WebListener
-public class ChatSessionListener implements HttpSessionListener {
+public class MySessionListener implements HttpSessionListener {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ChatSessionListener.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(MySessionListener.class);
 
     @Override
     public void sessionCreated(HttpSessionEvent se) {

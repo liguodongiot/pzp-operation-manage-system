@@ -1,6 +1,6 @@
 package com.pzp.manage.test;
 
-import com.pzp.manage.app.PzpManageApplication;
+import com.pzp.manage.PzpManageApplication;
 import org.junit.runner.RunWith;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
