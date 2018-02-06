@@ -33,6 +33,7 @@ public class CommonFilter implements Filter {
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         String uri=((HttpServletRequest) request).getRequestURI();
         LOGGER.info("URI is {} .", uri);
+        chain.doFilter(request,response);
     }
 
     @Override
