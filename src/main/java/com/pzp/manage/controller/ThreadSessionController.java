@@ -50,10 +50,12 @@ public class ThreadSessionController implements InitializingBean{
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        //可用核数
+        // 可用核数
         int cpuNums = Runtime.getRuntime().availableProcessors();
         LOGGER.info("可用核数：{}。",cpuNums);
-        newFixedThreadPool = Executors.newFixedThreadPool(cpuNums);
+        //newFixedThreadPool = Executors.newFixedThreadPool(cpuNums);
+        // 单一线程池
+        newFixedThreadPool = Executors.newSingleThreadExecutor();
     }
 
 }
