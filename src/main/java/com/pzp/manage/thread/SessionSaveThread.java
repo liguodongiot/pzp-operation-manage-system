@@ -1,11 +1,11 @@
-package com.pzp.thread;
+package com.pzp.manage.thread;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * <p>Project: pzp-operation-manage-system</p>
- * <p>Package: com.pzp.thread</p>
+ * <p>Package: com.pzp.manage.thread</p>
  * <p>Title: </p>
  * <p>Description: </p>
  *
