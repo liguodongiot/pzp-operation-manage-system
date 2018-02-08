@@ -1,5 +1,10 @@
 package com.pzp.manage.design.cor;
 
+import com.alibaba.fastjson.JSONObject;
+import com.pzp.manage.controller.SessionController;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.List;
 
 /**
@@ -13,6 +18,9 @@ import java.util.List;
  * @date 2018/2/8 14:03 星期四
  */
 public class RealChain implements Chain {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(RealChain.class);
+
     public LeaveRequest request;
     public List<Ratify> ratifyList;
     public int index;
@@ -43,6 +51,7 @@ public class RealChain implements Chain {
             RealChain realChain = new RealChain(ratifyList, request, index + 1);
             Ratify ratify = ratifyList.get(index);
             proceed = ratify.deal(realChain);
+            LOGGER.info("result: {}.", JSONObject.toJSONString(proceed));
         }
         return proceed;
     }
