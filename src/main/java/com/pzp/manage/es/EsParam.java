@@ -101,7 +101,8 @@ public class EsParam implements Serializable {
         this.name = builder.name;
         this.type = builder.type;
         this.field = builder.field;
-        this.alias = StringUtils.isBlank(builder.alias)?builder.name+"_alias":builder.alias;
+        //this.alias = StringUtils.isBlank(builder.alias)?builder.name+"_alias":builder.alias;
+        this.alias = builder.alias;
         this.replicas = builder.replicas;
         this.shards = builder.shards;
     }

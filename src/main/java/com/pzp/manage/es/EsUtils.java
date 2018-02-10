@@ -52,10 +52,12 @@ public final class EsUtils {
         IndicesAdminClient indicesAdminClient = esParam.getClient().admin().indices();
 
         CreateIndexRequestBuilder createIndexRequestBuilder = indicesAdminClient.prepareCreate(esParam.getName());
-        String aliasName = String.format("{\"%s\":{}}",esParam.getAlias());
-        LOGGER.info("aliasName:{}...", aliasName);
-        if(StringUtils.isNotBlank(aliasName)){
+        //是否创建索引别名
+        if(StringUtils.isNotBlank(esParam.getAlias())){
+            String aliasName = String.format("{\"%s\":{}}",esParam.getAlias());
+            LOGGER.info("aliasName:{}...", aliasName);
             createIndexRequestBuilder.setAliases(aliasName);
+
         }
         createIndexRequestBuilder.setSettings(Settings.builder()
                 .put("index.number_of_shards", esParam.getShards())

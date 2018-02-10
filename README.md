@@ -39,3 +39,14 @@ curl -XPUT "http://10.250.140.14:9200/user_info_v1?pretty" -d '
 
 curl -XGET  http://10.250.140.14:9200/user_info_v1?pretty
 ```
+
+```shell
+http://localhost:8888/userInfo/createIndexAndSetting
+
+http://localhost:8888/userInfo/deleteIndexLib
+
+
+
+http://localhost:9200/_cat/indices
+
+```
