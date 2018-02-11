@@ -15,24 +15,44 @@
 
 <body>
 
+    <div class="container">
+        <div class="row" style="margin-top: 5px;">
+            <div class="col-sm-10" style="margin-left: 20px;">
+                <span style="font-size: x-large; font-weight: bold;">Elasticsearch索引查询管理</span>
+            </div>
+        </div>
+        <hr />
+        <div class="row">
+            <form class="form-horizontal" >
+                <div class="form-group">
+                    <span class="label label-info" style="font-weight: bold;">请求URL：</span>
+                    <input type="text" id="reqUrl" placeholder="请输入ES请求URL" style="height:34px;padding:6px 12px;font-size:14px;width: 500px"/>
+                    <span class="label label-info" style="font-weight: bold;">请求方式：</span>
+                    <select id="reqMethod"  style="height:34px;padding:6px 12px;font-size:14px;width: 100px">
+                        <option value="" ></option>
+                        <option value="GET" >GET</option>
+                        <option value="POST" >POST</option>
+                    </select>
+                    <button type="button" class="btn btn-primary" id="queryBtn">查询</button>
+                    <button type="button" class="btn btn-info" id="resetBtn">重置</button>
+                </div>
+                <div class="form-group">
+                    <label class="label label-info" style="font-weight: bold;">请求内容：</label>
+                    <textarea class="form-control" rows="5" id="reqContent" style="width: 1200px"></textarea>
+                </div>
+            </form>
+        </div>
 
-<input type="text" class="form-control" id="inputId" placeholder="Jane Doe" />
-<button id="buttonId" class="btn btn-info" type="submit">Button</button>
-<input id="reId" type="text" value="Submit" />
+        <div class="row">
+            <form class="form-horizontal" >
+                <div class="form-group">
+                    <label class="label label-success" style="font-weight: bold;">返回内容：</label>
+                    <textarea class="form-control" rows="12" id="respContent" style="width: 1200px"></textarea>
+                </div>
+            </form>
+        </div>
+    </div>
 
-
-
-<div>
-    <span>URL：<input type="text" value="Submit" /></span>
-    <input type="button" value="提交" />
-</div>
-<div>
-<span>
-RequestBody：
-<textarea id="textId" rows="3" cols="20">
-</textarea>
-</span>
-</div>
 
 </body>
 
@@ -41,19 +61,33 @@ $(function() {
 
     $(document).ready(function() {
 
-        $("#buttonId").click(function(){
-            htmlobj = $.ajax({url:"/esManage/test",async:false});
-            console.log(htmlobj.responseText);
-            $("#textId").html(htmlobj.responseText);
+        $("#queryBtn").click(function(){
+
+            var reqUrl = $("#reqUrl").val();
+            var reqMethod = $("#reqMethod").val();
+            var reqContent = $("#reqContent").val();
+
+            $.post('/esManage/handleReq', {
+                    reqUrl: reqUrl,
+                    reqMethod: reqMethod,
+                    reqContent: reqContent,
+                    token: "es_admin"
+                }, function (data) {
+                    $('#respContent').val(data.data);
+                }, "json"
+            );
+
+        });
+
+        $('#resetBtn').click(function(){
+            $('#reqUrl').val('');
+            $('#reqMethod').val('');
+            document.getElementById('reqUrl').focus();
+            document.getElementById('reqContent').value = '';
+            document.getElementById('respContent').value = '';
         });
     });
-
 })
-
-
-
-
-
 </script>
 
 

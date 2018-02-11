@@ -1,7 +1,6 @@
 package com.pzp.manage.es;
 
 
-import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.client.transport.TransportClient;
 
 import java.io.Serializable;
