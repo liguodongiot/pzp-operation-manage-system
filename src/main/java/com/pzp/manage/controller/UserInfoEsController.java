@@ -3,13 +3,11 @@ package com.pzp.manage.controller;
 import com.pzp.manage.es.EsContext;
 import com.pzp.manage.es.EsParam;
 import com.pzp.manage.es.EsUtils;
-import com.pzp.manage.setting.DbSettings;
 import com.pzp.manage.setting.UserInfoIndexSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -48,10 +46,13 @@ public class UserInfoEsController implements InitializingBean {
     }
 
 
-
-    @RequestMapping(value = "/createIndexAndSetting")
+    /**
+     * http://localhost:8888/userInfo/createIndexLib
+     * @return
+     */
+    @RequestMapping(value = "/createIndexLib")
     @ResponseBody
-    public String createIndexAndSetting(){
+    public String createIndexLib(){
         EsUtils.deleteIndexLib(esParam);
         EsUtils.createIndexLib(esParam);
         return "[create index success]\n";
