@@ -90,11 +90,11 @@ public class EsTests extends BaseApplicationTest{
                 .setReplicas(1)
                 .build();
 
-        UserInfo userInfo1 = new UserInfo(2,"李国冬",23);
-        UserInfo userInfo2 = new UserInfo(3,"胡景涛",43);
-        UserInfo userInfo3 = new UserInfo(4,"张飞",24);
-        UserInfo userInfo4 = new UserInfo(5,"刘飞",26);
-        UserInfo userInfo5 = new UserInfo(6,"李元芳",23);
+        UserInfo userInfo1 = new UserInfo(2,"李国冬","滴答滴答滴滴答",23);
+        UserInfo userInfo2 = new UserInfo(3,"胡景涛","小酒窝长睫毛",43);
+        UserInfo userInfo3 = new UserInfo(4,"张飞","关公面前耍大刀",24);
+        UserInfo userInfo4 = new UserInfo(5,"刘飞","我到底是谁呀，我不知道",26);
+        UserInfo userInfo5 = new UserInfo(6,"李元芳","东方红，红太阳，希望在天上",23);
 
         List<DocumentParam<UserInfo>> documentParamList = new ArrayList<>();
         DocumentParam<UserInfo> document1 = new DocumentParam<>(settings.getName(),settings.getType(),

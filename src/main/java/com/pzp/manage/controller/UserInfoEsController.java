@@ -48,6 +48,7 @@ public class UserInfoEsController implements InitializingBean {
 
     /**
      * http://localhost:8888/userInfo/createIndexLib
+     * curl -XGET  http://10.250.140.14:9200/user_info_v1?pretty
      * @return
      */
     @RequestMapping(value = "/createIndexLib")
@@ -55,7 +56,7 @@ public class UserInfoEsController implements InitializingBean {
     public String createIndexLib(){
         EsUtils.deleteIndexLib(esParam);
         EsUtils.createIndexLib(esParam,true);
-        return "[create index success]\n";
+        return "[create index lib success]\n";
     }
 
 
@@ -68,7 +69,7 @@ public class UserInfoEsController implements InitializingBean {
     @ResponseBody
     public String deleteIndexLib(){
         EsUtils.deleteIndexLib(esParam);
-        return "[delete index success]\n";
+        return "[delete index lib success]\n";
     }
 
 
@@ -81,7 +82,7 @@ public class UserInfoEsController implements InitializingBean {
     public String refreshIndexLib(){
         EsUtils.refreshIndexLib(esParam);
         LOGGER.info("刷新索引成功。。。");
-        return "[refresh index success]\n";
+        return "[refresh index lib success]\n";
     }
 
     @Override

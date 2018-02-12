@@ -3,14 +3,15 @@ package com.pzp.manage.controller;
 import com.pzp.manage.es.EsContext;
 import com.pzp.manage.es.EsParam;
 import com.pzp.manage.es.EsUtils;
-import com.pzp.manage.setting.UserInfoIndexSettings;
 import com.pzp.manage.setting.UserManageIndexSettings;
-import org.omg.CORBA.Object;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Objects;
 

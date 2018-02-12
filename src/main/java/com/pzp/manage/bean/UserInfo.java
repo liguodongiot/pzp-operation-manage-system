@@ -14,6 +14,7 @@ public class UserInfo {
 
     private Integer id;
     private String name;
+    private String desc;
     private Integer age;
 
     public UserInfo() {
@@ -23,6 +24,21 @@ public class UserInfo {
         this.id = id;
         this.name = name;
         this.age = age;
+    }
+
+    public UserInfo(Integer id, String name, String desc, Integer age) {
+        this.id = id;
+        this.name = name;
+        this.desc = desc;
+        this.age = age;
+    }
+
+    public String getDesc() {
+        return desc;
+    }
+
+    public void setDesc(String desc) {
+        this.desc = desc;
     }
 
     public Integer getId() {
