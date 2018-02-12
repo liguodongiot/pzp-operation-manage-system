@@ -47,18 +47,18 @@ public final class EsUtils {
     private static final Integer BULK_SIZE = 2000;
 
 
-    public static void createIndexLib(EsParam esParam){
+    public static void createIndexLib(EsParam esParam, Boolean isUseAlias){
         LOGGER.info("EsParam:{}...", JSONObject.toJSONString(esParam));
         IndicesAdminClient indicesAdminClient = esParam.getClient().admin().indices();
 
         CreateIndexRequestBuilder createIndexRequestBuilder = indicesAdminClient.prepareCreate(esParam.getName());
         //是否创建索引别名
-        if(StringUtils.isNotBlank(esParam.getAlias())){
+        if(isUseAlias && StringUtils.isNotBlank(esParam.getAlias())){
             String aliasName = String.format("{\"%s\":{}}",esParam.getAlias());
             LOGGER.info("aliasName:{}...", aliasName);
             createIndexRequestBuilder.setAliases(aliasName);
-
         }
+
         createIndexRequestBuilder.setSettings(Settings.builder()
                 .put("index.number_of_shards", esParam.getShards())
                 .put("index.number_of_replicas", esParam.getReplicas()));

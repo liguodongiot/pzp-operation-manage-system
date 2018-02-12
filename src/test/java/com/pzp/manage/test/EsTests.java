@@ -39,7 +39,7 @@ public class EsTests extends BaseApplicationTest{
                 .setShards(3)
                 .setReplicas(1)
                 .build();
-        EsUtils.createIndexLib(esParam);
+        EsUtils.createIndexLib(esParam,true);
     }
 
 

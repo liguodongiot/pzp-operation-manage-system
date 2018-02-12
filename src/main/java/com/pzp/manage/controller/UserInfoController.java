@@ -134,4 +134,11 @@ public class UserInfoController {
 
 
 
+    @PostMapping(value = "/addUserInfoByForm")
+    public UserInfo addUserInfoByForm(Integer id,String name,Integer age) {
+        return new UserInfo(id,name,age);
+    }
+
+
+
 }

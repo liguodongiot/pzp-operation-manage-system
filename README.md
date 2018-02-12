@@ -46,7 +46,11 @@ http://localhost:8888/userInfo/createIndexAndSetting
 http://localhost:8888/userInfo/deleteIndexLib
 
 
+http://localhost:8888/userInfo/createIndexAndSetting
 
-http://localhost:9200/_cat/indices
+
+http://localhost:8888/userManage/createIndexLib?version=vb&isUseAlias=false
+http://localhost:8888/userManage/createIndexLib?version=va&isUseAlias=true
+
 
 ```

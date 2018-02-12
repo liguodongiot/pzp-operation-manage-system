@@ -1,6 +1,6 @@
 package com.pzp.manage.controller;
 
-import com.alibaba.fastjson.JSONObject;
+import com.pzp.manage.util.HttpUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,6 +12,7 @@ import org.springframework.web.servlet.ModelAndView;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * <p>Project: pzp-operation-manage-system</p>
@@ -50,14 +51,25 @@ public class EsManageController {
      * @param token
      * @return
      */
-    @RequestMapping(value = "/handleReq")
+    @RequestMapping(value = "/handleReq", method = RequestMethod.POST)
     @ResponseBody
     public Map<String, Object> handleReq(String reqUrl,
                             String reqMethod,
                             String reqContent,
                             String token) {
+        String responseBody = null;
         Map<String,Object> result = new HashMap<>(1);
-        result.put("data",reqUrl);
+        if(!Objects.equals(esToken,token)){
+            result.put("data","认证失败！");
+            return result;
+        }
+        if(Objects.equals(HttpUtil.HttpRequestMethodEnum.POST.getMethod(), reqMethod)){
+            responseBody = HttpUtil.doPostJson(reqUrl,reqContent);
+        } else if(Objects.equals(HttpUtil.HttpRequestMethodEnum.GET.getMethod(), reqMethod)) {
+            responseBody = HttpUtil.doGet(reqUrl);
+        }
+
+        result.put("data",responseBody);
         return result;
     }
 

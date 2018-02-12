@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -34,7 +35,33 @@ public class HttpUtil {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HttpUtil.class);
 
-    public static void doGet(String url){
+    /**
+     * HTTP请求方式
+     */
+    public enum HttpRequestMethodEnum {
+        POST("POST"),
+        GET("GET"),
+        HEAD("HEAD"),
+        PUT("PUT"),
+        DELETE("DELETE");
+
+        private String method;
+
+        HttpRequestMethodEnum(String method) {
+            this.method = method;
+        }
+
+        public String getMethod() {
+            return method;
+        }
+
+
+    }
+
+
+    public static String doGet(String url){
+
+        String responseBody = null;
 
         // 1. 创建HttpClient对象
         CloseableHttpClient httpClient = HttpClientBuilder.create().build();
@@ -45,13 +72,14 @@ public class HttpUtil {
         try {
             // 3. 执行GET请求
             response = httpClient.execute(httpGet);
-            LOGGER.info(response.getStatusLine().toString());
+            String statusInfo = response.getStatusLine().toString();
+            LOGGER.info("请求状态信息：{}。", statusInfo);
             // 4. 获取响应实体
             HttpEntity entity = response.getEntity();
             // 5. 处理响应实体
             if (entity != null) {
-                LOGGER.info("长度：" + entity.getContentLength());
-                LOGGER.info("内容：" + EntityUtils.toString(entity));
+                responseBody = EntityUtils.toString(entity);
+                LOGGER.info("响应内容：{}...", responseBody);
             }
         } catch (IOException e) {
             LOGGER.error("HttpUtil#doGet() error, url:{}",url,e);
@@ -64,11 +92,11 @@ public class HttpUtil {
                 LOGGER.error("HttpUtil#doGet() error, url:{}",url,e);
             }
         }
-
+        return responseBody;
     }
 
-
-    public static void doPostJson(String url,String requestBody){
+    public static String doPostJson(String url,String requestBody){
+        String responseBody = null;
         // 1. 创建HttpClient对象
         CloseableHttpClient httpClient = HttpClientBuilder.create().build();
         // 2. 创建HttpPost对象
@@ -79,28 +107,16 @@ public class HttpUtil {
         post.setHeader("Accept", "application/json");
         post.setEntity(new StringEntity(requestBody, Charset.forName("UTF-8")));
 
-//        // 3. 设置POST请求传递参数
-//        List<NameValuePair> params = new ArrayList<NameValuePair>();
-//        params.add(new BasicNameValuePair("username", "test"));
-//        params.add(new BasicNameValuePair("password", "12356"));
-//        try {
-//            UrlEncodedFormEntity entity = new UrlEncodedFormEntity(params);
-//            post.setEntity(entity);
-//        } catch (UnsupportedEncodingException e) {
-//            LOGGER.error("HttpUtil#doPost() error, url:{}",url,e);
-//        }
-
         // 4. 执行请求并处理响应
         try {
             CloseableHttpResponse response = httpClient.execute(post);
-            int statusCode = response.getStatusLine().getStatusCode();
-            if (statusCode != HttpStatus.SC_OK) {
-                LOGGER.warn("状态码为{}。。。", statusCode);
-            }
+            String statusInfo = response.getStatusLine().toString();
+            LOGGER.info("HttpUtil#doPostJson()请求状态信息：{}。", statusInfo);
+
             HttpEntity entity = response.getEntity();
             if (entity != null){
-                System.out.println("响应内容：");
-                System.out.println(EntityUtils.toString(entity));
+                responseBody = EntityUtils.toString(entity);
+                LOGGER.info("响应内容：{}",responseBody);
             }
             response.close();
         } catch (IOException e) {
@@ -110,59 +126,65 @@ public class HttpUtil {
             try {
                 httpClient.close();
             } catch (IOException e) {
-                LOGGER.error("HttpUtil#doPost() error, url:{}",url,e);
+                LOGGER.error("HttpUtil#doPostJson() error, url:{}",url,e);
             }
         }
+        return responseBody;
     }
 
 
-    public static void doPostForm(String url, Map<String,String> requestParam){
+    public static String doPostForm(String url, Map<String,String> requestParam){
+        String responseBody = null;
         // 1. 创建HttpClient对象
         CloseableHttpClient httpClient = HttpClientBuilder.create().build();
         // 2. 创建HttpPost对象
         HttpPost post = new HttpPost(url);
 
         // 3. 设置POST请求传递参数
-        List<NameValuePair> params = new ArrayList<NameValuePair>();
-        params.add(new BasicNameValuePair("username", "test"));
-        params.add(new BasicNameValuePair("password", "12356"));
+        List<NameValuePair> params = new ArrayList<>();
+        for (Map.Entry<String, String> entry : requestParam.entrySet()) {
+            params.add(new BasicNameValuePair(entry.getKey(), entry.getValue()));
+        }
         try {
             UrlEncodedFormEntity entity = new UrlEncodedFormEntity(params);
             post.setEntity(entity);
         } catch (UnsupportedEncodingException e) {
-            LOGGER.error("HttpUtil#doPost() error, url:{}",url,e);
+            LOGGER.error("HttpUtil#doPostForm() error, url:{}", url, e);
         }
 
         // 4. 执行请求并处理响应
         try {
             CloseableHttpResponse response = httpClient.execute(post);
-            int statusCode = response.getStatusLine().getStatusCode();
-            if (statusCode != HttpStatus.SC_OK) {
-                LOGGER.warn("状态码为{}。。。", statusCode);
-            }
+            String statusInfo = response.getStatusLine().toString();
+            LOGGER.info("HttpUtil#doPostForm()请求状态信息：{}。", statusInfo);
             HttpEntity entity = response.getEntity();
             if (entity != null){
-                System.out.println("响应内容：");
-                System.out.println(EntityUtils.toString(entity));
+                responseBody = EntityUtils.toString(entity);
+                LOGGER.info("响应内容：{}...",responseBody);
             }
             response.close();
         } catch (IOException e) {
-            LOGGER.error("HttpUtil#doPost() error, url:{}",url,e);
+            LOGGER.error("HttpUtil#doPostForm() error, url:{}",url,e);
         } finally {
             // 释放资源
             try {
                 httpClient.close();
             } catch (IOException e) {
-                LOGGER.error("HttpUtil#doPost() error, url:{}",url,e);
+                LOGGER.error("HttpUtil#doPostForm() error, url:{}",url,e);
             }
         }
+        return responseBody;
     }
 
 
     public static void main(String[] args) {
-        doGet("");
-        doPostJson("","");
-        doPostForm("",null);
+//        doGet("http://localhost:8888/userInfo/get?name=小明");
+//        doPostJson("http://localhost:8888/userInfo/addUserInfo","{\"name\":\"33dongdong3\",\"age\":333}");
+        Map<String,String> requestParam = new HashMap<>();
+        requestParam.put("id","11");
+        requestParam.put("name","fdsgsd");
+        requestParam.put("age","32");
+        doPostForm("http://localhost:8888/userInfo/addUserInfoByForm",requestParam);
     }
 
 

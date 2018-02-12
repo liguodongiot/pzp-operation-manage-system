@@ -54,7 +54,7 @@ public class UserInfoEsController implements InitializingBean {
     @ResponseBody
     public String createIndexLib(){
         EsUtils.deleteIndexLib(esParam);
-        EsUtils.createIndexLib(esParam);
+        EsUtils.createIndexLib(esParam,true);
         return "[create index success]\n";
     }
 
@@ -88,6 +88,6 @@ public class UserInfoEsController implements InitializingBean {
     public void afterPropertiesSet() throws Exception {
         esParam = new EsParam.ParamBuilder(esContext.getClient(),
                 userInfoIndexSettings.getName(),userInfoIndexSettings.getType(),
-                userInfoIndexSettings.getField()).build();
+                userInfoIndexSettings.getField()).setAlias(userInfoIndexSettings.getAlias()).build();
     }
 }

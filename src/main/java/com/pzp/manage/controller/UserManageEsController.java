@@ -50,19 +50,20 @@ public class UserManageEsController implements InitializingBean {
 
 
     /**
-     * http://localhost:8888/userManage/createIndexLib?version=vb
-     *
+     * http://localhost:8888/userManage/createIndexLib?version=vb&isUseAlias=false
+     * http://localhost:8888/userManage/createIndexLib?version=va&isUseAlias=true
      * @return
      */
     @GetMapping(value = "/createIndexLib")
     public String createIndexLib(
-            @RequestParam(value="version", required=false) String version){
-        if(Objects.equals(version,"vb")){
+            @RequestParam(value="version", required=false) String version,
+            @RequestParam(value="isUseAlias", required=false) String isUseAlias){
+        if (Objects.equals(version,"vb")) {
             EsUtils.deleteIndexLib(esParamVb);
-            EsUtils.createIndexLib(esParamVb);
-        } else {
+            EsUtils.createIndexLib(esParamVb, Boolean.valueOf(isUseAlias));
+        } else if (Objects.equals(version,"va")) {
             EsUtils.deleteIndexLib(esParamVa);
-            EsUtils.createIndexLib(esParamVa);
+            EsUtils.createIndexLib(esParamVa, Boolean.valueOf(isUseAlias));
         }
         return "[create index success,version="+ version + "]\n";
     }
@@ -110,6 +111,6 @@ public class UserManageEsController implements InitializingBean {
 
         esParamVb = new EsParam.ParamBuilder(esContext.getClient(),
                 settings.getNameVb(),settings.getType(),
-                settings.getField()).build();
+                settings.getField()).setAlias(settings.getAlias()).build();
     }
 }
