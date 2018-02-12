@@ -100,6 +100,47 @@ curl -XPOST 'http://10.250.140.14:9200/_aliases' -d '
 
 
 
+
+
+### 聚合Aggregations
+
+掌握Aggregations需要理解两个概念：
+
+- 桶(Buckets)：符合条件的文档的集合，相当于SQL中的group by。比如，在users表中，按“地区”聚合，一个人将被分到北京桶或上海桶或其他桶里；按“性别”聚合，一个人将被分到男桶或女桶
+
+
+- 指标(Metrics)：基于Buckets的基础上进行统计分析，相当于SQL中的count,avg,sum等。比如，按“地区”聚合，计算每个地区的人数，平均年龄等
+
+对照一条SQL来加深我们的理解：
+
+```sql
+SELECT COUNT(color) FROM table GROUP BY color
+```
+
+GROUP BY相当于做分桶的工作，COUNT是统计指标。
+
+
+
+```shell
+curl -XGET  'http://10.250.140.14:9200/user_info_v1/_search?pretty' -d '{
+	"aggs": {
+		"avg_grade": {
+			"avg": {
+				"field": "age"
+			}
+		}
+	}
+}'
+```
+
+
+
+
+
+
+
+
+
 ### 参考文档
 
 **Elasticsearch官方文档：**<https://www.elastic.co/guide/en/elasticsearch/reference/current/index.html>
