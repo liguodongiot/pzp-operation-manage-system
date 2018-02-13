@@ -1100,6 +1100,140 @@ curl -XGET  'http://10.250.140.14:9200/user_info_v1/_search?pretty' -d '{
 
 
 
+#### order排序
+
+order指定了最后返回结果的排序方式，默认是按照doc_count排序。
+
+```shell
+# 按文档数升序
+curl -XGET  'http://10.250.140.14:9200/user_info_v1/_search?pretty' -d '{ 
+   "size": 0,
+   "aggs": { 
+      "names": {
+			"terms": {
+				"field": "name",
+				"order": { "_count": "asc" }
+			}
+		}
+   } 
+}'
+
+# 结果
+{
+  "took" : 5,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 3,
+    "successful" : 3,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : 11,
+    "max_score" : 0.0,
+    "hits" : [ ]
+  },
+  "aggregations" : {
+    "names" : {
+      "doc_count_error_upper_bound" : 0,
+      "sum_other_doc_count" : 0,
+      "buckets" : [
+        {
+          "key" : "33dongdong3",
+          "doc_count" : 1
+        },
+        {
+          "key" : "刘飞",
+          "doc_count" : 1
+        },
+        {
+          "key" : "李国冬",
+          "doc_count" : 1
+        },
+        {
+          "key" : "胡景涛",
+          "doc_count" : 1
+        },
+        {
+          "key" : "李元芳",
+          "doc_count" : 3
+        },
+        {
+          "key" : "张飞",
+          "doc_count" : 4
+        }
+      ]
+    }
+  }
+}
+
+###################
+# 按照字典方式排序
+curl -XGET  'http://10.250.140.14:9200/user_info_v1/_search?pretty' -d '{ 
+   "size": 0,
+   "aggs": { 
+      "names": {
+			"terms": {
+				"field": "name",
+				"order": { "_term": "asc" }
+			}
+		}
+   } 
+}'
+
+# 结果
+{
+  "took" : 1,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 3,
+    "successful" : 3,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : 11,
+    "max_score" : 0.0,
+    "hits" : [ ]
+  },
+  "aggregations" : {
+    "names" : {
+      "doc_count_error_upper_bound" : 0,
+      "sum_other_doc_count" : 0,
+      "buckets" : [
+        {
+          "key" : "33dongdong3",
+          "doc_count" : 1
+        },
+        {
+          "key" : "刘飞",
+          "doc_count" : 1
+        },
+        {
+          "key" : "张飞",
+          "doc_count" : 4
+        },
+        {
+          "key" : "李元芳",
+          "doc_count" : 3
+        },
+        {
+          "key" : "李国冬",
+          "doc_count" : 1
+        },
+        {
+          "key" : "胡景涛",
+          "doc_count" : 1
+        }
+      ]
+    }
+  }
+}
+
+```
+
+
+
+
+
 
 
 ### 参考文档
