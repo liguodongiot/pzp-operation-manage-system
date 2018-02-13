@@ -14,8 +14,9 @@ public class UserInfo {
 
     private Integer id;
     private String name;
-    private String desc;
+    private String motto;
     private Integer age;
+    private String sex;
 
     public UserInfo() {
     }
@@ -26,19 +27,27 @@ public class UserInfo {
         this.age = age;
     }
 
-    public UserInfo(Integer id, String name, String desc, Integer age) {
+    public UserInfo(Integer id, String name, String motto, Integer age) {
         this.id = id;
         this.name = name;
-        this.desc = desc;
+        this.motto = motto;
         this.age = age;
     }
 
-    public String getDesc() {
-        return desc;
+    public UserInfo(Integer id, String name, String motto, Integer age, String sex) {
+        this.id = id;
+        this.name = name;
+        this.motto = motto;
+        this.age = age;
+        this.sex = sex;
     }
 
-    public void setDesc(String desc) {
-        this.desc = desc;
+    public String getMotto() {
+        return motto;
+    }
+
+    public void setMotto(String motto) {
+        this.motto = motto;
     }
 
     public Integer getId() {
@@ -63,5 +72,13 @@ public class UserInfo {
 
     public void setAge(Integer age) {
         this.age = age;
+    }
+
+    public String getSex() {
+        return sex;
+    }
+
+    public void setSex(String sex) {
+        this.sex = sex;
     }
 }

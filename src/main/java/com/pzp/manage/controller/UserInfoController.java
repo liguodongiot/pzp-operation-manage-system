@@ -107,7 +107,8 @@ public class UserInfoController {
         UserInfo user = new UserInfo();
         BeanMap beanMap = BeanMap.create(user);
         beanMap.putAll(map);
-        return userInfoService.updateUserInfoById(id, user);
+        //return userInfoService.updateUserInfoById(id, user);
+        return user;
     }
 
 

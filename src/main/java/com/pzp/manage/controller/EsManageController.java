@@ -64,11 +64,14 @@ public class EsManageController {
             return result;
         }
         if(Objects.equals(HttpUtil.HttpRequestMethodEnum.POST.getMethod(), reqMethod)){
-            responseBody = HttpUtil.doPostJson(reqUrl,reqContent);
+            responseBody = HttpUtil.doPostJson(reqUrl, reqContent);
         } else if(Objects.equals(HttpUtil.HttpRequestMethodEnum.GET.getMethod(), reqMethod)) {
             responseBody = HttpUtil.doGet(reqUrl);
+        } else if(Objects.equals(HttpUtil.HttpRequestMethodEnum.PUT.getMethod(), reqMethod)){
+            responseBody = HttpUtil.doPutJson(reqUrl, reqContent);
+        } else if(Objects.equals(HttpUtil.HttpRequestMethodEnum.DELETE.getMethod(), reqMethod)){
+            responseBody = HttpUtil.doDelete(reqUrl);
         }
-
         result.put("data",responseBody);
         return result;
     }

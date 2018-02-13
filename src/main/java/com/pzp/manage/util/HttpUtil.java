@@ -1,14 +1,9 @@
 package com.pzp.manage.util;
 
-import com.pzp.manage.listener.MySessionListener;
 import org.apache.http.HttpEntity;
-import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
-import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.*;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -21,7 +16,6 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -86,7 +80,9 @@ public class HttpUtil {
         } finally {
             // 6. 释放资源
             try {
-                response.close();
+                if(response != null){
+                    response.close();
+                }
                 httpClient.close();
             } catch (IOException e) {
                 LOGGER.error("HttpUtil#doGet() error, url:{}",url,e);
@@ -106,10 +102,10 @@ public class HttpUtil {
         post.addHeader("Content-type","application/json; charset=utf-8");
         post.setHeader("Accept", "application/json");
         post.setEntity(new StringEntity(requestBody, Charset.forName("UTF-8")));
-
+        CloseableHttpResponse response = null;
         // 4. 执行请求并处理响应
         try {
-            CloseableHttpResponse response = httpClient.execute(post);
+            response = httpClient.execute(post);
             String statusInfo = response.getStatusLine().toString();
             LOGGER.info("HttpUtil#doPostJson()请求状态信息：{}。", statusInfo);
 
@@ -118,12 +114,15 @@ public class HttpUtil {
                 responseBody = EntityUtils.toString(entity);
                 LOGGER.info("响应内容：{}",responseBody);
             }
-            response.close();
+
         } catch (IOException e) {
             LOGGER.error("HttpUtil#doPost() error, url:{}",url,e);
         } finally {
             // 释放资源
             try {
+                if(response!=null){
+                    response.close();
+                }
                 httpClient.close();
             } catch (IOException e) {
                 LOGGER.error("HttpUtil#doPostJson() error, url:{}",url,e);
@@ -151,10 +150,11 @@ public class HttpUtil {
         } catch (UnsupportedEncodingException e) {
             LOGGER.error("HttpUtil#doPostForm() error, url:{}", url, e);
         }
-
+        CloseableHttpResponse response = null;
         // 4. 执行请求并处理响应
         try {
-            CloseableHttpResponse response = httpClient.execute(post);
+            response = httpClient.execute(post);
+
             String statusInfo = response.getStatusLine().toString();
             LOGGER.info("HttpUtil#doPostForm()请求状态信息：{}。", statusInfo);
             HttpEntity entity = response.getEntity();
@@ -162,12 +162,15 @@ public class HttpUtil {
                 responseBody = EntityUtils.toString(entity);
                 LOGGER.info("响应内容：{}...",responseBody);
             }
-            response.close();
+
         } catch (IOException e) {
             LOGGER.error("HttpUtil#doPostForm() error, url:{}",url,e);
         } finally {
             // 释放资源
             try {
+                if(response!=null){
+                    response.close();
+                }
                 httpClient.close();
             } catch (IOException e) {
                 LOGGER.error("HttpUtil#doPostForm() error, url:{}",url,e);
@@ -177,14 +180,85 @@ public class HttpUtil {
     }
 
 
+    public static String doPutJson(String url,String requestBody){
+
+        CloseableHttpClient httpClient = HttpClientBuilder.create().build();
+        HttpPut httpPut = new HttpPut(url);
+
+        //设置header
+        httpPut.setHeader("Content-type", "application/json; charset=utf-8");
+        httpPut.setHeader("Accept", "application/json");
+        httpPut.setEntity(new StringEntity(requestBody, Charset.forName("UTF-8")));
+        String content = null;
+        CloseableHttpResponse httpResponse = null;
+        try {
+            //响应信息
+            httpResponse = httpClient.execute(httpPut);
+            HttpEntity entity = httpResponse.getEntity();
+            content = EntityUtils.toString(entity);
+
+            String statusInfo = httpResponse.getStatusLine().toString();
+            LOGGER.info("HttpUtil#doPutJson()请求状态信息：{}。", statusInfo);
+        } catch (Exception e) {
+            LOGGER.error("HttpUtil#doPutJson()  error,url: {}.", url, e);
+        } finally {
+            try {
+                if(httpResponse!=null){
+                    httpResponse.close();
+                }
+                httpClient.close();
+            } catch (IOException e) {
+                LOGGER.error("HttpUtil#doPutJson() close error, url:{}",url,e);
+            }
+        }
+        return content;
+    }
+
+
+    public static String doDelete(String url){
+        CloseableHttpClient closeableHttpClient = HttpClientBuilder.create().build();
+        HttpDelete httpdelete = new HttpDelete(url);
+        String content = null;
+        CloseableHttpResponse httpResponse = null;
+        try {
+            httpResponse = closeableHttpClient.execute(httpdelete);
+            HttpEntity entity = httpResponse.getEntity();
+            content = EntityUtils.toString(entity);
+            String statusInfo = httpResponse.getStatusLine().toString();
+            LOGGER.info("HttpUtil#doDelete()请求状态信息：{}。", statusInfo);
+        } catch (Exception e) {
+            LOGGER.error("HttpUtil#doDelete() error,url: {}.", url, e);
+        }finally{
+            try {
+                if(httpResponse!=null){
+                    httpResponse.close();
+                }
+                closeableHttpClient.close();
+            } catch (IOException e) {
+                LOGGER.error("HttpUtil#doDelete() close error, url:{}",url,e);
+            }
+        }
+        return content;
+    }
+
+
+
+
+
+
     public static void main(String[] args) {
 //        doGet("http://localhost:8888/userInfo/get?name=小明");
 //        doPostJson("http://localhost:8888/userInfo/addUserInfo","{\"name\":\"33dongdong3\",\"age\":333}");
-        Map<String,String> requestParam = new HashMap<>();
-        requestParam.put("id","11");
-        requestParam.put("name","fdsgsd");
-        requestParam.put("age","32");
-        doPostForm("http://localhost:8888/userInfo/addUserInfoByForm",requestParam);
+//        Map<String,String> requestParam = new HashMap<>();
+//        requestParam.put("id","11");
+//        requestParam.put("name","fdsgsd");
+//        requestParam.put("age","32");
+//        doPostForm("http://localhost:8888/userInfo/addUserInfoByForm",requestParam);
+
+        //doPutJson("http://localhost:8888/userInfo/updateById/1","{\"id\":1,\"name\":\"33dongdong3\",\"motto\":null,\"age\":333,\"sex\":\"female\"}");
+
+        doDelete("http://localhost:8888/userInfo/delById/1");
+
     }
 
 
