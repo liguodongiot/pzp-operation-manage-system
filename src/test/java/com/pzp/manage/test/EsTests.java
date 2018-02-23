@@ -1,16 +1,14 @@
 package com.pzp.manage.test;
 
 import com.pzp.manage.bean.UserInfo;
-import com.pzp.manage.es.DocumentParam;
-import com.pzp.manage.es.EsContext;
-import com.pzp.manage.es.EsParam;
-import com.pzp.manage.es.EsUtils;
+import com.pzp.manage.es.*;
 import com.pzp.manage.setting.UserInfoIndexSettings;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.SearchHits;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 /**
  * <p>Project: pzp-operation-manage-system</p>
@@ -105,25 +103,25 @@ public class EsTests extends BaseApplicationTest{
         UserInfo userInfo10 = new UserInfo(11,"李元芳","希望在天上,青青草原",23,"male");
 
         List<DocumentParam<UserInfo>> documentParamList = new ArrayList<>();
-        DocumentParam<UserInfo> document1 = new DocumentParam<>(settings.getName(),settings.getType(),
+        DocumentParam<UserInfo> document1 = new DocumentParam<>(esParam.getName(),esParam.getType(),
                 Integer.toString(userInfo1.getId()),userInfo1);
-        DocumentParam<UserInfo> document2 = new DocumentParam<>(settings.getName(),settings.getType(),
+        DocumentParam<UserInfo> document2 = new DocumentParam<>(esParam.getName(),esParam.getType(),
                 Integer.toString(userInfo2.getId()),userInfo2);
-        DocumentParam<UserInfo> document3 = new DocumentParam<>(settings.getName(),settings.getType(),
+        DocumentParam<UserInfo> document3 = new DocumentParam<>(esParam.getName(),esParam.getType(),
                 Integer.toString(userInfo3.getId()),userInfo3);
-        DocumentParam<UserInfo> document4 = new DocumentParam<>(settings.getName(),settings.getType(),
+        DocumentParam<UserInfo> document4 = new DocumentParam<>(esParam.getName(),esParam.getType(),
                 Integer.toString(userInfo4.getId()),userInfo4);
-        DocumentParam<UserInfo> document5 = new DocumentParam<>(settings.getName(),settings.getType(),
+        DocumentParam<UserInfo> document5 = new DocumentParam<>(esParam.getName(),esParam.getType(),
                 Integer.toString(userInfo5.getId()),userInfo5);
-        DocumentParam<UserInfo> document6 = new DocumentParam<>(settings.getName(),settings.getType(),
+        DocumentParam<UserInfo> document6 = new DocumentParam<>(esParam.getName(),esParam.getType(),
                 Integer.toString(userInfo6.getId()),userInfo6);
-        DocumentParam<UserInfo> document7 = new DocumentParam<>(settings.getName(),settings.getType(),
+        DocumentParam<UserInfo> document7 = new DocumentParam<>(esParam.getName(),esParam.getType(),
                 Integer.toString(userInfo7.getId()),userInfo7);
-        DocumentParam<UserInfo> document8 = new DocumentParam<>(settings.getName(),settings.getType(),
+        DocumentParam<UserInfo> document8 = new DocumentParam<>(esParam.getName(),esParam.getType(),
                 Integer.toString(userInfo8.getId()),userInfo8);
-        DocumentParam<UserInfo> document9 = new DocumentParam<>(settings.getName(),settings.getType(),
+        DocumentParam<UserInfo> document9 = new DocumentParam<>(esParam.getName(),esParam.getType(),
                 Integer.toString(userInfo9.getId()),userInfo9);
-        DocumentParam<UserInfo> document10 = new DocumentParam<>(settings.getName(),settings.getType(),
+        DocumentParam<UserInfo> document10 = new DocumentParam<>(esParam.getName(),esParam.getType(),
                 Integer.toString(userInfo10.getId()),userInfo10);
         documentParamList.add(document1);
         documentParamList.add(document2);
@@ -139,6 +137,29 @@ public class EsTests extends BaseApplicationTest{
         EsUtils.bulkIndexDocument(esParam.getClient(), documentParamList);
     }
 
+    @Test
+    public void testSearchTemplate(){
 
+        EsSearchParam esSearchParam = new EsSearchParam.ParamBuilder(esContext.getClient(),
+                settings.getName(),settings.getType())
+                .setAlias(settings.getAlias())
+                .build();
+
+        Map<String, Object> templateParams = new HashMap<>();
+        templateParams.put("param_name", "张飞");
+
+        String templateScript = "{\n" +
+                "        \"query\" : {\n" +
+                "            \"match\" : {\n" +
+                "                \"name\" : \"{{param_name}}\"\n" +
+                "            }\n" +
+                "        }\n" +
+                "}";
+        SearchHits searchHits = EsUtils.searchTemplate(esSearchParam, templateParams, templateScript);
+        long total = searchHits.getTotalHits();
+        SearchHit[]  searchHitArr = searchHits.getHits();
+        LOGGER.info("total:{}", total);
+        LOGGER.info("searchHitArr:{}", Arrays.toString(searchHitArr));
+    }
 
 }

@@ -41,11 +41,11 @@ public class UserManageEsController implements InitializingBean {
     private EsParam esParamVb;
 
     /**
-     * http://localhost:8888/userManage/getUserManage
+     * http://localhost:8888/userManage/getEsIndexInfo
      * @return
      */
-    @GetMapping(value = "/getUserManage")
-    public String getDbInfo(){
+    @GetMapping(value = "/getEsIndexInfo")
+    public String getEsIndexInfo(){
         return settings.toString();
     }
 

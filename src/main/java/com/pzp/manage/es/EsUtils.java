@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
+import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexResponse;
@@ -14,6 +15,7 @@ import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.index.IndexResponse;
+import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.IndicesAdminClient;
@@ -23,12 +25,21 @@ import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.reindex.BulkByScrollResponse;
+import org.elasticsearch.index.reindex.DeleteByQueryAction;
+import org.elasticsearch.index.reindex.DeleteByQueryRequestBuilder;
+import org.elasticsearch.script.ScriptType;
+import org.elasticsearch.script.mustache.SearchTemplateRequestBuilder;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.elasticsearch.search.sort.SortOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * <p>Project: pzp-operation-manage-system</p>
@@ -177,38 +188,116 @@ public final class EsUtils {
     }
 
 
+//    /**
+//     * 根据UID（type#id）删除多个文档
+//     * @param client
+//     * @param name
+//     * @param type
+//     * @param id
+//     */
+//    public static void deleteDocumentByUids(TransportClient client, String name,String type, String[] id) {
+//        SearchResponse response = client.prepareSearch(name)
+//                .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
+//                .setQuery(QueryBuilders.idsQuery().types(type).addIds(id))
+//                .setFrom(0)
+//                .setSize(id.length)
+//                .execute()
+//                .actionGet();
+//
+//        SearchHits hits = response.getHits();
+//
+//        if (null != hits && hits.getTotalHits() > 0) {
+//            for (SearchHit searchHit : hits) {
+//                String indexName = searchHit.getIndex();
+//                String typeName = searchHit.getType();
+//                String docId = searchHit.getId();
+//                DeleteResponse deleteResponse = client.prepareDelete(indexName,typeName,docId).get();
+//                if(deleteResponse==null || deleteResponse.getShardInfo().getFailed() > 0){
+//                    LOGGER.error("删除ES索引数据有误，result:{}。。。", docId);
+//                }
+//            }
+//        } else {
+//            LOGGER.info("没有查询到任何内容！");
+//        }
+//
+//    }
+
+
     /**
-     * 根据UID（type#id）删除多个文档
+     * 根据id删除文档
      * @param client
-     * @param name
+     * @param index
      * @param type
      * @param id
      */
-    public static void deleteDocumentByUids(TransportClient client, String name,String type, String[] id) {
-        SearchResponse response = client.prepareSearch(name)
-                .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
-                .setQuery(QueryBuilders.idsQuery().types(type).addIds(id))
-                .setFrom(0)
-                .setSize(id.length)
-                .execute()
-                .actionGet();
-
-        SearchHits hits = response.getHits();
-
-        if (null != hits && hits.getTotalHits() > 0) {
-            for (SearchHit searchHit : hits) {
-                String indexName = searchHit.getIndex();
-                String typeName = searchHit.getType();
-                String docId = searchHit.getId();
-                DeleteResponse deleteResponse = client.prepareDelete(indexName,typeName,docId).get();
-                if(deleteResponse==null || deleteResponse.getShardInfo().getFailed() > 0){
-                    LOGGER.error("删除ES索引数据有误，result:{}。。。", docId);
-                }
-            }
-        } else {
-            LOGGER.info("没有查询到任何内容！");
+    public static void deleteDocument(TransportClient client, String index, String type, String id){
+        DeleteResponse deleteResponse = client.prepareDelete(index, type, id).get();
+        if(deleteResponse==null || deleteResponse.getShardInfo().getFailed() > 0){
+            LOGGER.error("删除ES索引数据有误，index:{}, type:{}, id{}。", index, type, id);
         }
+        LOGGER.info("删除ES索引数据分片信息：shardInfo:{}", deleteResponse.getShardInfo());
+    }
 
+
+    /**
+     * 根据查询删除文档
+     * @param client
+     * @param index
+     * @param name
+     * @param text
+     */
+    public static void deleteDocumentByQuery(TransportClient client,final String index,final String name,final Object text,
+                                             boolean asynchronously){
+
+        DeleteByQueryRequestBuilder deleteByQueryRequestBuilder =  DeleteByQueryAction.INSTANCE.newRequestBuilder(client)
+                .filter(QueryBuilders.matchQuery(name, text))
+                .source(index);
+
+        if(asynchronously){
+            //异步
+            deleteByQueryRequestBuilder.execute(new ActionListener<BulkByScrollResponse>() {
+                @Override
+                public void onResponse(BulkByScrollResponse response) {
+                    long deleted = response.getDeleted();
+                    LOGGER.info("通过查询删除文档数：{}。", deleted);
+                }
+                @Override
+                public void onFailure(Exception e) {
+                    LOGGER.error("通过查询删除文档异常：index：{},  name：{}, text：{}。", index, name, text, e);
+                }
+            });
+
+        } else {
+            //同步
+            BulkByScrollResponse response = deleteByQueryRequestBuilder.get();
+            long deleted = response.getDeleted();
+            LOGGER.info("通过查询删除文档数：{}。", deleted);
+        }
+    }
+
+
+    public static SearchHits searchTemplate(EsSearchParam esSearchParam, Map<String, Object> templateParams,String templateScript){
+
+        SearchRequest searchRequest = new SearchRequest();
+        if(esSearchParam.getAlias()!=null) {
+            searchRequest.indices(esSearchParam.getAlias());
+        } else {
+            searchRequest.indices(esSearchParam.getName());
+        }
+        searchRequest.types(esSearchParam.getType())
+                .searchType(SearchType.DFS_QUERY_THEN_FETCH);
+
+        SearchResponse searchResponse = new SearchTemplateRequestBuilder(esSearchParam.getClient())
+                .setScript(templateScript)
+                .setScriptType(ScriptType.INLINE)
+                .setScriptParams(templateParams)
+                .setRequest(searchRequest)
+                .get()
+                .getResponse();
+        SearchHits searchHits = searchResponse.getHits();
+        LOGGER.info("searchHits:{}.", searchHits);
+
+        return searchHits;
     }
 
 
