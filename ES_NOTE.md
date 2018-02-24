@@ -54,7 +54,6 @@ Array support does not require a dedicated type
 object for single JSON objects
 # Nested datatype
 nested for arrays of JSON objects
-
 ```
 
 
@@ -80,6 +79,12 @@ nested for arrays of JSON objects
 支持聚合
 
 
+
+####(match query) vs (term query)
+
+match query，搜索的时候，首先会解析查询字符串，进行分词，然后查询；
+
+而term query，输入的查询内容是什么，就会按照什么去查询，并不会解析查询内容，对它分词。
 
 
 

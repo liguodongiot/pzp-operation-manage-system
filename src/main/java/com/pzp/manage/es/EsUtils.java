@@ -24,6 +24,7 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.reindex.BulkByScrollResponse;
 import org.elasticsearch.index.reindex.DeleteByQueryAction;
@@ -246,13 +247,14 @@ public final class EsUtils {
      * @param name
      * @param text
      */
-    public static void deleteDocumentByQuery(TransportClient client,final String index,final String name,final Object text,
+    public static void deleteDocumentByMatchQuery(TransportClient client,
+                                             final String index,
+                                             final String name,
+                                             final Object text,
                                              boolean asynchronously){
-
         DeleteByQueryRequestBuilder deleteByQueryRequestBuilder =  DeleteByQueryAction.INSTANCE.newRequestBuilder(client)
                 .filter(QueryBuilders.matchQuery(name, text))
                 .source(index);
-
         if(asynchronously){
             //异步
             deleteByQueryRequestBuilder.execute(new ActionListener<BulkByScrollResponse>() {
@@ -263,10 +265,9 @@ public final class EsUtils {
                 }
                 @Override
                 public void onFailure(Exception e) {
-                    LOGGER.error("通过查询删除文档异常：index：{},  name：{}, text：{}。", index, name, text, e);
+                    LOGGER.error("通过查询删除文档异常： index：{},  name：{}, text：{}。", index, name, text, e);
                 }
             });
-
         } else {
             //同步
             BulkByScrollResponse response = deleteByQueryRequestBuilder.get();
@@ -299,9 +300,6 @@ public final class EsUtils {
 
         return searchHits;
     }
-
-
-
 
 
 }

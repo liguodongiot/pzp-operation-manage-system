@@ -1,5 +1,6 @@
 package com.pzp.manage.test;
 
+import com.alibaba.fastjson.JSONObject;
 import com.pzp.manage.bean.UserInfo;
 import com.pzp.manage.es.*;
 import com.pzp.manage.setting.UserInfoIndexSettings;
@@ -148,18 +149,43 @@ public class EsTests extends BaseApplicationTest{
         Map<String, Object> templateParams = new HashMap<>();
         templateParams.put("param_name", "张飞");
 
+//        String templateScript = "{\n" +
+//                "        \"query\" : {\n" +
+//                "            \"match\" : {\n" +
+//                "                \"name\" : \"{{param_name}}\"\n" +
+//                "            }\n" +
+//                "        }\n" +
+//                "}";
+
         String templateScript = "{\n" +
-                "        \"query\" : {\n" +
-                "            \"match\" : {\n" +
-                "                \"name\" : \"{{param_name}}\"\n" +
-                "            }\n" +
-                "        }\n" +
+                "\t\"query\" : {\n" +
+                "\t\t\"match\" : {\n" +
+                "\t\t\t\"name\" : \"{{param_name}}\"\n" +
+                "\t\t}\n" +
+                "\t},\n" +
+                "    \"from\": 0, \n" +
+                "    \"size\": 2\n" +
                 "}";
+
+
         SearchHits searchHits = EsUtils.searchTemplate(esSearchParam, templateParams, templateScript);
         long total = searchHits.getTotalHits();
         SearchHit[]  searchHitArr = searchHits.getHits();
         LOGGER.info("total:{}", total);
-        LOGGER.info("searchHitArr:{}", Arrays.toString(searchHitArr));
+        LOGGER.info("searchHitArr:{}", JSONObject.toJSON(searchHitArr));
     }
+
+
+    @Test
+    public void testDeleteDocument(){
+        EsUtils.deleteDocument(esContext.getClient(),settings.getAlias(),settings.getType(),"2");
+    }
+
+    @Test
+    public void testDeleteDocumentByMatchQuery() throws InterruptedException {
+        EsUtils.deleteDocumentByMatchQuery(esContext.getClient(),settings.getAlias(),"name","张飞",true);
+        Thread.sleep(3000);
+    }
+
 
 }
