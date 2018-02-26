@@ -57,6 +57,9 @@ public class EsParam implements Serializable {
         return replicas;
     }
 
+    public void setReplicas(Integer replicas) {
+        this.replicas = replicas;
+    }
 
     public static class ParamBuilder {
 

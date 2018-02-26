@@ -1,16 +1,23 @@
 package com.pzp.manage.es;
 
 import com.alibaba.fastjson.JSONObject;
+import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.admin.indices.alias.IndicesAliasesResponse;
+import org.elasticsearch.action.admin.indices.alias.exists.AliasesExistResponse;
+import org.elasticsearch.action.admin.indices.alias.get.GetAliasesResponse;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
-import org.elasticsearch.action.admin.indices.mapping.put.PutMappingResponse;
+import org.elasticsearch.action.admin.indices.mapping.get.GetFieldMappingsResponse;
+import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.elasticsearch.action.admin.indices.refresh.RefreshResponse;
+import org.elasticsearch.action.admin.indices.settings.get.GetSettingsResponse;
+import org.elasticsearch.action.admin.indices.settings.put.UpdateSettingsResponse;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteResponse;
@@ -20,25 +27,26 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.IndicesAdminClient;
 import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.cluster.metadata.AliasMetaData;
+import org.elasticsearch.cluster.metadata.MappingMetaData;
+import org.elasticsearch.common.collect.ImmutableOpenMap;
+import org.elasticsearch.common.compress.CompressedXContent;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.reindex.BulkByScrollResponse;
 import org.elasticsearch.index.reindex.DeleteByQueryAction;
 import org.elasticsearch.index.reindex.DeleteByQueryRequestBuilder;
 import org.elasticsearch.script.ScriptType;
 import org.elasticsearch.script.mustache.SearchTemplateRequestBuilder;
-import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
-import org.elasticsearch.search.builder.SearchSourceBuilder;
-import org.elasticsearch.search.sort.SortOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
+import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -116,6 +124,133 @@ public final class EsUtils {
                 response.getTotalShards(),
                 response.getSuccessfulShards(),
                 response.getFailedShards());
+    }
+
+
+    /**
+     * 更新副本数量
+     * @param esParam
+     */
+    public static void updateIndicesSettings(EsParam esParam){
+        UpdateSettingsResponse response = esParam.getClient().admin().indices().prepareUpdateSettings(esParam.getName())
+                .setSettings(Settings.builder()
+                        .put("index.number_of_replicas", esParam.getReplicas())
+                )
+                .get();
+        LOGGER.info("更新索引settings副本数{}。", response.isAcknowledged()?"成功":"失败");
+    }
+
+    /**
+     * 获取索引设置（分片数，副本数）
+     * @param esParam
+     */
+    public static void getIndicesSettings(EsParam esParam){
+        GetSettingsResponse response = esParam.getClient().admin().indices()
+                .prepareGetSettings(esParam.getName())
+                .get();
+        for (ObjectObjectCursor<String, Settings> cursor : response.getIndexToSettings()) {
+            String index = cursor.key;
+            Settings settings = cursor.value;
+            Integer shards = settings.getAsInt("index.number_of_shards", null);
+            Integer replicas = settings.getAsInt("index.number_of_replicas", null);
+            LOGGER.info("获取索引settings。index:{}, shards:{}, replicas:{}.", index, shards, replicas);
+        }
+    }
+
+    /**
+     * 获取mappings信息
+     * @param esParam
+     */
+    public static void getIndicesMappings(EsParam esParam){
+        GetMappingsResponse response = esParam.getClient().admin().indices()
+                .prepareGetMappings(esParam.getName())
+                .get();
+        ImmutableOpenMap<String, ImmutableOpenMap<String, MappingMetaData>> indexMap =  response.getMappings();
+        ImmutableOpenMap<String, MappingMetaData> fieldIndexMap = indexMap.get(esParam.getName());
+        MappingMetaData mappingMetaData = fieldIndexMap.get(esParam.getType());
+        try {
+            CompressedXContent source = mappingMetaData.source();
+            LOGGER.info("Mappings info:[\n{}\n].", source.toString());
+            Map<String, Object> sourceAsMap = mappingMetaData.getSourceAsMap();
+            LOGGER.info("Mappings info:[\n{}\n].",JSONObject.toJSON(sourceAsMap));
+        } catch (IOException e) {
+            LOGGER.error("metadata to map error. EsParam:{}.", JSONObject.toJSON(esParam),e);
+        }
+    }
+
+    /**
+     * 热切换索引别名
+     * @param client
+     */
+    public static void replaceIndicesAliase(TransportClient client, String removeIndex, String addIndex, String aliases){
+        IndicesAliasesResponse response = client.admin().indices()
+                .prepareAliases()
+                .removeAlias(removeIndex, aliases)
+                .addAlias(addIndex, aliases)
+                .execute().actionGet();
+        LOGGER.info("热切换索引别名{}。", response.isAcknowledged()?"成功":"失败");
+
+    }
+
+    /**
+     * 移除索引别名
+     * @param client
+     * @param indices
+     * @param aliases
+     */
+    public static void removeIndicesAliases(TransportClient client, String indices, String aliases){
+        IndicesAliasesResponse response = client.admin().indices()
+                .prepareAliases()
+                .removeAlias(indices, aliases)
+                .execute().actionGet();
+        LOGGER.info("移除索引别名{}。", response.isAcknowledged()?"成功":"失败");
+    }
+
+    /**
+     * 增加索引别名
+     * @param client
+     * @param indices
+     * @param aliases
+     */
+    public static void addIndicesAliases(TransportClient client, String indices, String aliases){
+        IndicesAliasesResponse response = client.admin().indices()
+                .prepareAliases()
+                .addAlias(indices, aliases)
+                .execute().actionGet();
+        LOGGER.info("增加索引别名{}。", response.isAcknowledged()?"成功":"失败");
+    }
+
+
+    /**
+     * 判断索引是否存在
+     * @param client
+     * @param indices
+     */
+    public static void isAliasesExist(TransportClient client, String indices){
+        AliasesExistResponse response = client.admin().indices()
+                .prepareAliasesExist(indices)
+                .execute().actionGet();
+        boolean exists = response.isExists();
+        LOGGER.info("索引别名{}{}。", indices,exists?"存在":"不存在");
+    }
+
+    /**
+     * 获取索引别名信息
+     * @param client
+     * @param indices
+     */
+    public static void getAliases(TransportClient client, String indices){
+        GetAliasesResponse response = client.admin().indices()
+                .prepareGetAliases(indices)
+                .execute().actionGet();
+        ImmutableOpenMap<String, List<AliasMetaData>> aliases = response.getAliases();
+
+        for (Iterator<String> it = aliases.keysIt(); it.hasNext(); ) {
+            String index = it.next();
+            List<AliasMetaData> aliasMetaData = aliases.get(index);
+            LOGGER.info("索引别名信息:{}，Index:{}.", JSONObject.toJSON(aliasMetaData), index);
+        }
+
     }
 
 

@@ -40,7 +40,10 @@ public class CompanyEsController implements InitializingBean {
     public void afterPropertiesSet() throws Exception {
         esParam = new EsParam.ParamBuilder(esContext.getClient(),
                 settings.getName(),settings.getType(),
-                settings.getField()).setAlias(settings.getAlias()).build();
+                settings.getField())
+                .setAlias(settings.getAlias())
+                .setReplicas(0)
+                .build();
     }
 
     /**
@@ -58,8 +61,7 @@ public class CompanyEsController implements InitializingBean {
      * curl -XGET  http://10.250.140.14:9200/alibaba?pretty
      * @return
      */
-    @RequestMapping(value = "/createIndexLib")
-    @ResponseBody
+    @GetMapping(value = "/createIndexLib")
     public String createIndexLib(){
         EsUtils.deleteIndexLib(esParam);
         EsUtils.createIndexLib(esParam,true);
@@ -72,8 +74,7 @@ public class CompanyEsController implements InitializingBean {
      * curl -XGET  http://172.22.1.28:9200/_cat/indices
      * curl -XGET  http://172.22.1.28:9200/user_info_v1?pretty
      */
-    @RequestMapping(value = "/deleteIndexLib")
-    @ResponseBody
+    @GetMapping(value = "/deleteIndexLib")
     public String deleteIndexLib(){
         EsUtils.deleteIndexLib(esParam);
         return "[delete index lib success]\n";
@@ -84,13 +85,49 @@ public class CompanyEsController implements InitializingBean {
      * http://localhost:8888/company/refreshIndexLib
      * @return
      */
-    @RequestMapping(value = "/refreshIndexLib")
-    @ResponseBody
+    @GetMapping(value = "/refreshIndexLib")
     public String refreshIndexLib(){
         EsUtils.refreshIndexLib(esParam);
         LOGGER.info("刷新索引成功。。。");
         return "[refresh index lib success]\n";
     }
+
+    /**
+     * http://localhost:8888/company/updateIndicesSettings?replicas=2
+     * @param replicas
+     * @return
+     */
+    @GetMapping(value = "/updateIndicesSettings")
+    public String updateIndicesSettings(Integer replicas){
+        esParam.setReplicas(replicas);
+        EsUtils.updateIndicesSettings(esParam);
+        LOGGER.info("更新索引settings成功。。。");
+        return "[update index lib settings success]\n";
+    }
+
+    /**
+     * http://localhost:8888/company/getIndicesSettings
+     * @return
+     */
+    @GetMapping(value = "/getIndicesSettings")
+    public String getIndicesSettings(){
+        EsUtils.getIndicesSettings(esParam);
+        LOGGER.info("获取索引setting成功。。。");
+        return "[get index lib settings success]\n";
+    }
+
+    /**
+     * http://localhost:8888/company/getIndicesMappings
+     * @return
+     */
+    @GetMapping(value = "/getIndicesMappings")
+    public String getIndicesMappings(){
+        EsUtils.getIndicesMappings(esParam);
+        LOGGER.info("获取索引mappings成功。。。");
+        return "[get index lib mappings success]\n";
+    }
+
+
 
 
 }
