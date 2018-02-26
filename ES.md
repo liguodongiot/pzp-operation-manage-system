@@ -45,6 +45,9 @@ sysctl -p
 
 
 ```shell
+# 查看集群是否启动成功
+curl 'http://10.250.140.14:9200/?pretty'
+
 # 查看所有索引库
 curl http://10.250.140.14:9200/_cat/indices
 
@@ -58,6 +61,33 @@ curl -XPUT 'http://10.250.140.14:9200/user_manage_v1/user_manage/1' -d '{
   "name" : "李国冬",
   "age" : 25
 }'
+
+
+# 统计文档数 完整请求格式
+curl -i -XGET '10.250.140.14:9200/user_info_v1/_count?pretty' -H 'Content-Type: application/json' -d'
+{
+    "query": {
+        "match_all": {}
+    }
+}'
+
+# 结果
+--------------------------------------------------------------------------
+HTTP/1.1 200 OK
+content-type: application/json; charset=UTF-8
+content-length: 95
+
+{
+  "count" : 1,
+  "_shards" : {
+    "total" : 3,
+    "successful" : 3,
+    "failed" : 0
+  }
+}
+--------------------------------------------------------------------------
+
+
 
 # 根据ID查询  get
 curl http://10.250.140.14:9200/user_manage_v1/user_manage/1
@@ -100,8 +130,28 @@ curl -XPUT 'http://10.250.140.14:9200/user_info_v1/user_info/13?pretty' -d '{"id
 # 删除数据
 curl -XDELETE 'http://10.250.140.14:9200/user_info_v1/user_info/13?pretty'
 
-
 ```
+
+
+
+#### 排序
+
+```shell
+# _score默认是降序，其他字段默认是升序
+curl -XGET 'http://10.250.140.14:9200/user_info_v1/user_info/_search?pretty' -d '{
+    "sort" : [
+        { "name" : {"order" : "asc"}},
+        "sex",
+        { "age" : "desc" },
+        "_score"
+    ],
+    "query" : {
+        "term" : { "name" : "张飞" }
+    }
+}'
+```
+
+
 
 
 
@@ -1227,8 +1277,91 @@ curl -XGET  'http://10.250.140.14:9200/user_info_v1/_search?pretty' -d '{
     }
   }
 }
+```
+
+
+
+
+
+### 集群管理
+
+#### 集群和节点信息
+
+```shell
+# GET /_cluster/health?pretty
+curl -XGET 'http://10.250.140.14:9200/_cluster/health?pretty'
+
+{
+  "cluster_name" : "es-cluster",
+  "status" : "yellow",
+  "timed_out" : false,
+  "number_of_nodes" : 1,
+  "number_of_data_nodes" : 1,
+  "active_primary_shards" : 34,
+  "active_shards" : 34,
+  "relocating_shards" : 0,
+  "initializing_shards" : 0,
+  "unassigned_shards" : 34,
+  "delayed_unassigned_shards" : 0,
+  "number_of_pending_tasks" : 0,
+  "number_of_in_flight_fetch" : 0,
+  "task_max_waiting_in_queue_millis" : 0,
+  "active_shards_percent_as_number" : 50.0
+}
+
+
+
+# GET /_cluster/health?wait_for_status=yellow&timeout=50s
+curl -XGET 'http://10.250.140.14:9200/_cluster/health?wait_for_status=red&timeout=10s&pretty=true'
+
+curl -XGET 'http://10.250.140.14:9200/_cluster/health?wait_for_status=green&timeout=10s&pretty=true'
+{
+  "cluster_name" : "es-cluster",
+  "status" : "yellow",
+  "timed_out" : true,
+  "number_of_nodes" : 1,
+  "number_of_data_nodes" : 1,
+  "active_primary_shards" : 34,
+  "active_shards" : 34,
+  "relocating_shards" : 0,
+  "initializing_shards" : 0,
+  "unassigned_shards" : 34,
+  "delayed_unassigned_shards" : 0,
+  "number_of_pending_tasks" : 0,
+  "number_of_in_flight_fetch" : 0,
+  "task_max_waiting_in_queue_millis" : 0,
+  "active_shards_percent_as_number" : 50.0
+}
+
+# 一个或多个索引
+curl -XGET 'http://10.250.140.14:9200/_cluster/health/user_info_v1,user_manage_v1?pretty'
+
+
+# GET /_cluster/state
+curl -XGET 'http://10.250.140.14:9200/_cluster/state?pretty'
+
+# GET /_cluster/stats?human&pretty
+curl -XGET 'http://10.250.140.14:9200/_cluster/stats?human&pretty'
+
+# GET /_cluster/pending_tasks
+curl -XGET 'http://10.250.140.14:9200/_cluster/pending_tasks?pretty'
+
+# 元数据和路由表
+curl -XGET 'http://10.250.140.14:9200/_cluster/state/metadata,routing_table/user_manage_v1?pretty'
+
+
+# GET /_nodes
+curl -XGET 'http://10.250.140.14:9200/_nodes?pretty'
+
+# GET /_nodes/stats
+curl -XGET 'http://10.250.140.14:9200/_nodes/stats?pretty'
+
+# GET /_nodes/nodeId1,nodeId2/stats
+curl -XGET 'http://10.250.140.14:9200/_nodes/node-1/stats?pretty'
 
 ```
+
+
 
 
 
@@ -1244,5 +1377,7 @@ curl -XGET  'http://10.250.140.14:9200/user_info_v1/_search?pretty' -d '{
 
 **Elasticsearch 服务配置属性：**<https://www.ibm.com/support/knowledgecenter/zh/SSFPJS_8.5.6/com.ibm.wbpm.main.doc/topics/rfps_esearch_configoptions.html>
 
-**elasticsearch 查询数据 | 分页查询(java)** <http://www.sojson.com/blog/90.html>
+**elasticsearch 查询数据 | 分页查询(java)：** <http://www.sojson.com/blog/90.html>
+
+**Elasticsearch: 权威指南：**<https://www.elastic.co/guide/cn/elasticsearch/guide/current/index.html>
 
