@@ -418,11 +418,664 @@ curl -XGET '10.250.140.14:9200/alibaba_alias/employee/_search?pretty' -H 'Conten
 
 
 
+#### [集群健康](https://www.elastic.co/guide/cn/elasticsearch/guide/current/cluster-health.html)
+
+status 字段指示着当前集群在总体上是否工作正常。它的三种颜色含义如下：
+
+green
+所有的主分片和副本分片都正常运行。
+yellow
+所有的主分片都正常运行，但不是所有的副本分片都正常运行。
+red
+有主分片没能正常运行。
+
+```shell
+curl -XGET '10.250.140.14:9200/_cluster/health?pretty'
+
+{
+  "cluster_name" : "es-cluster",
+  "status" : "yellow",
+  "timed_out" : false,
+  "number_of_nodes" : 1,
+  "number_of_data_nodes" : 1,
+  "active_primary_shards" : 52,
+  "active_shards" : 52,
+  "relocating_shards" : 0,
+  "initializing_shards" : 0,
+  "unassigned_shards" : 52,
+  "delayed_unassigned_shards" : 0,
+  "number_of_pending_tasks" : 0,
+  "number_of_in_flight_fetch" : 0,
+  "task_max_waiting_in_queue_millis" : 0,
+  "active_shards_percent_as_number" : 50.0
+}
+
+```
 
 
 
+```shell
+# 设置分片和副本数
+curl -XPUT '10.250.140.14:9200/blogs?pretty' -H 'Content-Type: application/json' -d'
+{
+   "settings" : {
+      "number_of_shards" : 3,
+      "number_of_replicas" : 1
+   }
+}
+'
+
+# 更新副本数
+curl -XPUT '10.250.140.14:9200/blogs/_settings?pretty' -H 'Content-Type: application/json' -d'
+{
+   "number_of_replicas" : 2
+}
+'
+
+```
 
 
+
+#### 数据输入和输出
+
+```shell
+# 创建新文档
+curl -XPUT '10.250.140.14:9200/website/blog/123?pretty' -H 'Content-Type: application/json' -d'
+{
+  "title": "My first blog entry",
+  "text":  "Just trying this out...",
+  "date":  "2014/01/01"
+}
+'
+
+# 自动生成的 ID 是 URL-safe、 基于 Base64 编码且长度为20个字符的 GUID 字符串。 
+# 这些 GUID 字符串由可修改的 FlakeID 模式生成，这种模式允许多个节点并行生成唯一 ID ，
+# 且互相之间的冲突概率几乎为零。
+curl -XPOST '10.250.140.14:9200/website/blog/?pretty' -H 'Content-Type: application/json' -d'
+{
+  "title": "My second blog entry",
+  "text":  "Still trying this out...",
+  "date":  "2014/01/01"
+}
+'
+
+curl -XGET '10.250.140.14:9200/website/blog/123?pretty'
+
+curl -i -XGET http://10.250.140.14:9200/website/blog/124?pretty
+
+# 返回文档的一部分
+curl -XGET '10.250.140.14:9200/website/blog/123?_source=title,text&pretty'
+
+{
+  "_index" : "website",
+  "_type" : "blog",
+  "_id" : "123",
+  "_version" : 1,
+  "found" : true,
+  "_source" : {
+    "text" : "Just trying this out...",
+    "title" : "My first blog entry"
+  }
+}
+
+# 返回文档_source字段
+curl -XGET '10.250.140.14:9200/website/blog/123/_source?pretty'
+
+{
+  "title" : "My first blog entry",
+  "text" : "Just trying this out...",
+  "date" : "2014/01/01"
+}
+
+# 检查文档是否存在
+curl -i -XHEAD http://10.250.140.14:9200/website/blog/123
+
+
+# 更新文档
+# 在 Elasticsearch 中文档是 不可改变 的，不能修改它们。
+# 相反，如果想要更新现有的文档，需要 重建索引 或者进行替换
+curl -XPUT '10.250.140.14:9200/website/blog/123?pretty' -H 'Content-Type: application/json' -d'
+{
+  "title": "My first blog entry",
+  "text":  "I am starting to get the hang of this...",
+  "date":  "2014/01/02"
+}
+'
+-----------------------------
+{
+  "_index" : "website",
+  "_type" : "blog",
+  "_id" : "123",
+  "_version" : 2,   @@@
+  "result" : "updated",  @@@
+  "_shards" : {
+    "total" : 2,
+    "successful" : 1,
+    "failed" : 0
+  },
+  "created" : false  @@@
+}
+
+
+# 删除文档
+curl -XDELETE '10.250.140.14:9200/website/blog/123?pretty'
+
+
+```
+
+
+
+#### 创建新文档
+
+使用索引请求的 `POST` 形式让 Elasticsearch 自动生成唯一 `_id` :
+
+```shell
+POST /website/blog/
+{ ... }
+```
+
+
+
+如果已经有自己的 `_id` ，那么我们必须告诉 Elasticsearch ，只有在相同的 `_index` 、 `_type` 和 `_id` 不存在时才接受我们的索引请求。这里有两种方式，他们做的实际是相同的事情。
+
+第一种方法使用 `op_type` 查询 -字符串参数：
+
+```
+PUT /website/blog/123?op_type=create
+{ ... }
+```
+
+第二种方法是在 URL 末端使用 `/_create` :
+
+```
+PUT /website/blog/123/_create
+{ ... }
+```
+
+如果创建新文档的请求成功执行，Elasticsearch 会返回元数据和一个 `201 Created` 的 HTTP 响应码。
+
+另一方面，如果具有相同的 `_index` 、 `_type` 和 `_id` 的文档已经存在，Elasticsearch 将会返回 `409 Conflict` 响应码
+
+```shell
+curl -XPUT '10.250.140.14:9200/website/blog/123?pretty=true&op_type=create' -H 'Content-Type: application/json' -d'
+{
+  "title": "My first blog entry",
+  "text":  "I am starting to get the hang of this...",
+  "date":  "2014/01/02"
+}
+'
+
+curl -XPUT '10.250.140.14:9200/website/blog/123/_create?pretty' -H 'Content-Type: application/json' -d'
+{
+  "title": "My first blog entry",
+  "text":  "I am starting to get the hang of this...",
+  "date":  "2014/01/02"
+}
+'
+```
+
+
+
+#### [乐观并发控制](https://www.elastic.co/guide/cn/elasticsearch/guide/current/optimistic-concurrency-control.html)
+
+```shell
+curl -XPUT '10.250.140.14:9200/website/blog/1/_create?pretty' -H 'Content-Type: application/json' -d'
+{
+  "title": "My first blog entry",
+  "text":  "Just trying this out..."
+}
+'
+
+curl -XGET '10.250.140.14:9200/website/blog/1?pretty'
+
+
+curl -XPUT '10.250.140.14:9200/website/blog/1?version=1&pretty' -H 'Content-Type: application/json' -d'
+{
+  "title": "My first blog entry",
+  "text":  "Starting to get the hang of this..."
+}
+'
+
+
+curl -XPUT '10.250.140.14:9200/website/blog/1?version=1&pretty' -H 'Content-Type: application/json' -d'
+{
+  "title": "My first blog entry",
+  "text":  "Starting to get the hang of this..."
+}
+'
+
+
+###################################
+# 外部系统使用版本控制  指定版本号
+# 当前版本号小于指定版本号
+curl -XPUT '10.250.140.14:9200/website/blog/2?version=5&version_type=external&pretty' -H 'Content-Type: application/json' -d'
+{
+  "title": "My first external blog entry",
+  "text":  "Starting to get the hang of this..."
+}
+'
+
+curl -XPUT '10.250.140.14:9200/website/blog/2?version=10&version_type=external&pretty' -H 'Content-Type: application/json' -d'
+{
+  "title": "My first external blog entry",
+  "text":  "This is a piece of cake..."
+}
+'
+
+
+curl -XPUT '10.250.140.14:9200/website/blog/2?version=10&version_type=external&pretty' -H 'Content-Type: application/json' -d'
+{
+  "title": "My first external blog entry",
+  "text":  "This is a piece of cake..."
+}
+'
+
+```
+
+
+
+#### 文档部分更新
+
+```shell
+curl -XGET '10.250.140.14:9200/website/blog/1?pretty'
+
+{
+  "_index" : "website",
+  "_type" : "blog",
+  "_id" : "1",
+  "_version" : 2,
+  "found" : true,
+  "_source" : {
+    "title" : "My first blog entry",
+    "text" : "Starting to get the hang of this..."
+  }
+}
+
+
+
+curl -XPOST '10.250.140.14:9200/website/blog/1/_update?pretty' -H 'Content-Type: application/json' -d'
+{
+   "doc" : {
+      "tags" : [ "testing" ],
+      "views": 0
+   }
+}
+'
+
+curl -XGET '10.250.140.14:9200/website/blog/1?pretty'
+
+{
+  "_index" : "website",
+  "_type" : "blog",
+  "_id" : "1",
+  "_version" : 3,
+  "found" : true,
+  "_source" : {
+    "title" : "My first blog entry",
+    "text" : "Starting to get the hang of this...",
+    "views" : 0,
+    "tags" : [
+      "testing"
+    ]
+  }
+}
+
+# 使用脚本部分更新文档
+# 脚本可以在 update API中用来改变 _source 的字段内容， 它在更新脚本中称为 ctx._source 。
+curl -XPOST '10.250.140.14:9200/website/blog/1/_update?pretty' -H 'Content-Type: application/json' -d'
+{
+   "script" : "ctx._source.views+=1"
+}
+'
+
+curl -XGET '10.250.140.14:9200/website/blog/1?pretty'
+
+{
+  "_index" : "website",
+  "_type" : "blog",
+  "_id" : "1",
+  "_version" : 4,
+  "found" : true,
+  "_source" : {
+    "title" : "My first blog entry",
+    "text" : "Starting to get the hang of this...",
+    "views" : 1,
+    "tags" : [
+      "testing"
+    ]
+  }
+}
+
+
+-----------------
+
+
+curl -XPOST '10.250.140.14:9200/website/blog/1/_update?pretty' -H 'Content-Type: application/json' -d'
+{
+	"script": {
+		"inline": "ctx._source.tags.add(params.new_tag)",
+		"params": {
+			"new_tag": "search"
+		}
+	}
+}
+'
+
+
+curl -XGET '10.250.140.14:9200/website/blog/1?pretty'
+{
+  "_index" : "website",
+  "_type" : "blog",
+  "_id" : "1",
+  "_version" : 8,
+  "found" : true,
+  "_source" : {
+    "title" : "My first blog entry",
+    "text" : "Starting to get the hang of this...",
+    "views" : 0,
+    "tags" : [
+      "testing",
+      "search"
+    ]
+  }
+}
+
+
+# 选择通过设置 ctx.op 为 delete 来删除基于其内容的文档
+curl -XPOST '10.250.140.14:9200/website/blog/1/_update?pretty' -H 'Content-Type: application/json' -d'
+{
+	"script": {
+		"inline": "ctx.op = ctx._source.views == params.count ? \u0027delete\u0027 : \u0027none\u0027",
+		"params": {
+			"count": 1
+		}
+	}
+}
+'
+
+curl -XGET '10.250.140.14:9200/website/blog/1?pretty'
+{
+  "_index" : "website",
+  "_type" : "blog",
+  "_id" : "1",
+  "found" : false
+}
+
+
+# 更新的文档可能尚不存在
+# 使用 upsert 参数，指定如果文档不存在就应该先创建它
+# 我们第一次运行这个请求时， upsert 值作为新文档被索引，初始化 views 字段为 1 。 
+# 在后续的运行中，由于文档已经存在， script 更新操作将替代 upsert 进行应用，对 views 计数器进行累加。
+curl -XPOST '10.250.140.14:9200/website/pageviews/1/_update?pretty' -H 'Content-Type: application/json' -d'
+{
+   "script" : "ctx._source.views+=1",
+   "upsert": {
+       "views": 1
+   }
+}
+'
+
+curl -XGET '10.250.140.14:9200/website/pageviews/1?pretty'
+
+# 更新和冲突
+# 通过 设置参数 retry_on_conflict 来自动完成， 
+# 这个参数规定了失败之前 update 应该重试的次数，它的默认值为 0 。
+# 失败之前重试该更新5次。
+curl -XPOST '10.250.140.14:9200/website/pageviews/1/_update?retry_on_conflict=5&pretty' -H 'Content-Type: application/json' -d'
+{
+   "script" : "ctx._source.views+=1",
+   "upsert": {
+       "views": 0
+   }
+}
+'
+
+# 在增量操作无关顺序的场景，例如递增计数器等这个方法十分有效，
+# 但是在其他情况下变更的顺序 是 非常重要的。 类似 index API ， update API 默认采用 
+# 最终写入生效 的方案。
+
+
+```
+
+
+
+#### [取回多个文档](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_Retrieving_Multiple_Documents.html)
+
+```shell
+curl -XGET '10.250.140.14:9200/_mget?pretty' -H 'Content-Type: application/json' -d '{
+   "docs" : [
+      {
+         "_index" : "website",
+         "_type" :  "blog",
+         "_id" :    2
+      },
+      {
+         "_index" : "website",
+         "_type" :  "pageviews",
+         "_id" :    1,
+         "_source": "views"
+      }
+   ]
+}'
+
+
+# 如果想检索的数据都在相同的 _index 中（甚至相同的 _type 中），
+# 则可以在 URL 中指定默认的 /_index 或者默认的 /_index/_type 。
+curl -XGET '10.250.140.14:9200/website/blog/_mget?pretty' -H 'Content-Type: application/json' -d '{
+   "docs" : [
+      { "_id" : 2 },
+      { "_type" : "pageviews", "_id" :   1 }
+   ]
+}'
+
+{
+  "docs" : [
+    {
+      "_index" : "website",
+      "_type" : "blog",
+      "_id" : "2",
+      "_version" : 10,
+      "found" : true,
+      "_source" : {
+        "title" : "My first external blog entry",
+        "text" : "This is a piece of cake..."
+      }
+    },
+    {
+      "_index" : "website",
+      "_type" : "pageviews",
+      "_id" : "1",
+      "_version" : 2,
+      "found" : true,
+      "_source" : {
+        "views" : 2
+      }
+    }
+  ]
+}
+
+
+# 如果所有文档的 _index 和 _type 都是相同的，你可以只传一个 ids 数组，而不是整个 docs 数组
+curl -XGET '10.250.140.14:9200/website/blog/_mget?pretty' -H 'Content-Type: application/json' -d '{
+   "ids" : [ "2", "1" ]
+}'
+
+{
+  "docs" : [
+    {
+      "_index" : "website",
+      "_type" : "blog",
+      "_id" : "2",
+      "_version" : 10,
+      "found" : true,
+      "_source" : {
+        "title" : "My first external blog entry",
+        "text" : "This is a piece of cake..."
+      }
+    },
+    {
+      "_index" : "website",
+      "_type" : "blog",
+      "_id" : "1",
+      "found" : false
+    }
+  ]
+}
+
+
+```
+
+
+
+#### [代价较小的批量操作](https://www.elastic.co/guide/cn/elasticsearch/guide/current/bulk.html)
+
+```shell
+curl -XPOST '10.250.140.14:9200/_bulk?pretty' -H 'Content-Type: application/json' -d'
+{ "delete": { "_index": "website", "_type": "blog", "_id": "123" }} 
+{ "create": { "_index": "website", "_type": "blog", "_id": "123" }}
+{ "title":    "My first blog post" }
+{ "index":  { "_index": "website", "_type": "blog" }}
+{ "title":    "My second blog post" }
+{ "update": { "_index": "website", "_type": "blog", "_id": "123", "_retry_on_conflict" : 3} }
+{ "doc" : {"title" : "My updated blog post"} }
+'
+
+{
+  "took" : 22,
+  "errors" : false,
+  "items" : [
+    {
+      "delete" : {
+        "found" : false,
+        "_index" : "website",
+        "_type" : "blog",
+        "_id" : "123",
+        "_version" : 1,
+        "result" : "not_found",
+        "_shards" : {
+          "total" : 2,
+          "successful" : 1,
+          "failed" : 0
+        },
+        "status" : 404
+      }
+    },
+    {
+      "create" : {
+        "_index" : "website",
+        "_type" : "blog",
+        "_id" : "123",
+        "_version" : 2,
+        "result" : "created",
+        "_shards" : {
+          "total" : 2,
+          "successful" : 1,
+          "failed" : 0
+        },
+        "created" : true,
+        "status" : 201
+      }
+    },
+    {
+      "index" : {
+        "_index" : "website",
+        "_type" : "blog",
+        "_id" : "AWHV9UIF7cHMetqd_3rT",
+        "_version" : 1,
+        "result" : "created",
+        "_shards" : {
+          "total" : 2,
+          "successful" : 1,
+          "failed" : 0
+        },
+        "created" : true,
+        "status" : 201
+      }
+    },
+    {
+      "update" : {
+        "_index" : "website",
+        "_type" : "blog",
+        "_id" : "123",
+        "_version" : 3,
+        "result" : "updated",
+        "_shards" : {
+          "total" : 2,
+          "successful" : 1,
+          "failed" : 0
+        },
+        "status" : 200
+      }
+    }
+  ]
+}
+
+# bulk 请求不是原子的： 不能用它来实现事务控制。每个请求是单独处理的，
+# 因此一个请求的成功或失败不会影响其他的请求。
+
+
+curl -XPOST '10.250.140.14:9200/_bulk?pretty' -H 'Content-Type: application/json' -d '
+{ "create": { "_index": "website", "_type": "blog", "_id": "123" }}
+{ "title":    "Cannot create - it already exists" }
+{ "index":  { "_index": "website", "_type": "blog", "_id": "123" }}
+{ "title":    "But we can update it" }
+'
+
+{
+  "took" : 11,
+  "errors" : true,
+  "items" : [
+    {
+      "create" : {
+        "_index" : "website",
+        "_type" : "blog",
+        "_id" : "123",
+        "status" : 409,
+        "error" : {
+          "type" : "version_conflict_engine_exception",
+          "reason" : "[blog][123]: version conflict, document already exists (current version [3])",
+          "index_uuid" : "j-7Dag08SH2hzUv-V3MlYQ",
+          "shard" : "0",
+          "index" : "website"
+        }
+      }
+    },
+    {
+      "index" : {
+        "_index" : "website",
+        "_type" : "blog",
+        "_id" : "123",
+        "_version" : 4,
+        "result" : "updated",
+        "_shards" : {
+          "total" : 2,
+          "successful" : 1,
+          "failed" : 0
+        },
+        "created" : false,
+        "status" : 200
+      }
+    }
+  ]
+}
+
+
+# 在 bulk 请求的 URL 中接收默认的 /_index 或者 /_index/_type
+curl -XPOST '10.250.140.14:9200/website/_bulk?pretty' -H 'Content-Type: application/json' -d'
+{ "index": { "_type": "log" }}
+{ "event": "User logged in" }
+'
+
+# 仍然可以覆盖元数据行中的 _index 和 _type , 但是它将使用 URL 中的这些元数据值作为默认值
+curl -XPOST '10.250.140.14:9200/website/log/_bulk?pretty' -H 'Content-Type: application/json' -d '
+{ "index": {}}
+{ "event": "User logged in" }
+{ "index": { "_type": "blog" }}
+{ "title": "Overriding the default type" }
+'
+
+
+```
 
 
 
