@@ -290,6 +290,20 @@ match query，搜索的时候，首先会解析查询字符串，进行分词，
 
 
 
+### 分词
+
+#### ik_max_word 和 ik_smart 什么区别?
+
+ik_max_word: 会将文本做最细粒度的拆分，比如会将“中华人民共和国国歌”拆分为“中华人民共和国,中华人民,中华,华人,人民共和国,人民,人,民,共和国,共和,和,国国,国歌”，会穷尽各种可能的组合；
+
+ik_smart: 会做最粗粒度的拆分，比如会将“中华人民共和国国歌”拆分为“中华人民共和国,国歌”。
+
+
+
+
+
+
+
 ### 异常
 
 **1、Fielddata is disabled on text fields by default. Set fielddata=true on [interests] in order to load fielddata in memory by uninverting the inverted index. Note that this can however use significant memory. Alternatively use a keyword field instead.**

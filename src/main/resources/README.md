@@ -206,7 +206,7 @@ curl -XGET '10.250.140.14:9200/alibaba_alias/employee/_search?pretty'
 
 
 # 查询字符串 （_query-string_） 搜索
-10.250.140.14:9200/alibaba_alias/employee/_search?q=last_name:哈登&pretty
+# 10.250.140.14:9200/alibaba_alias/employee/_search?q=last_name:哈登&pretty
 # 中文要编码
 curl -XGET 'http://10.250.140.14:9200/alibaba_alias/employee/_search?q=last_name:%E5%93%88%E7%99%BB&pretty'
 
@@ -1080,4 +1080,221 @@ curl -XPOST '10.250.140.14:9200/website/log/_bulk?pretty' -H 'Content-Type: appl
 
 
 
+
+#### [搜索——最基本的工具](https://www.elastic.co/guide/cn/elasticsearch/guide/current/search.html)
+
+```shell
+curl -XPUT 'http://localhost:9200/us/user/1?pretty=1' -d '
+{
+   "email" : "john@smith.com",
+   "name" : "John Smith",
+   "username" : "@john"
+}
+'
+
+curl -XPUT 'http://localhost:9200/gb/user/2?pretty=1' -d '
+{
+   "email" : "mary@jones.com",
+   "name" : "Mary Jones",
+   "username" : "@mary"
+}
+'
+
+curl -XPUT 'http://localhost:9200/gb/tweet/3?pretty=1' -d '
+{
+   "date" : "2014-09-13",
+   "name" : "Mary Jones",
+   "tweet" : "Elasticsearch means full text search has never been so easy",
+   "user_id" : 2
+}
+'
+
+curl -XPUT 'http://localhost:9200/us/tweet/4?pretty=1' -d '
+{
+   "date" : "2014-09-14",
+   "name" : "John Smith",
+   "tweet" : "@mary it is not just text, it does everything",
+   "user_id" : 1
+}
+'
+
+curl -XPUT 'http://localhost:9200/gb/tweet/5?pretty=1' -d '
+{
+   "date" : "2014-09-15",
+   "name" : "Mary Jones",
+   "tweet" : "However did I manage before Elasticsearch?",
+   "user_id" : 2
+}
+'
+
+curl -XPUT 'http://localhost:9200/us/tweet/6?pretty=1' -d '
+{
+   "date" : "2014-09-16",
+   "name" : "John Smith",
+   "tweet" : "The Elasticsearch API is really easy to use",
+   "user_id" : 1
+}
+'
+
+curl -XPUT 'http://localhost:9200/gb/tweet/7?pretty=1' -d '
+{
+   "date" : "2014-09-17",
+   "name" : "Mary Jones",
+   "tweet" : "The Query DSL is really powerful and flexible",
+   "user_id" : 2
+}
+'
+
+curl -XPUT 'http://localhost:9200/us/tweet/8?pretty=1' -d '
+{
+   "date" : "2014-09-18",
+   "name" : "John Smith",
+   "user_id" : 1
+}
+'
+
+curl -XPUT 'http://localhost:9200/gb/tweet/9?pretty=1' -d '
+{
+   "date" : "2014-09-19",
+   "name" : "Mary Jones",
+   "tweet" : "Geo-location aggregations are really cool",
+   "user_id" : 2
+}
+'
+
+curl -XPUT 'http://localhost:9200/us/tweet/10?pretty=1' -d '
+{
+   "date" : "2014-09-20",
+   "name" : "John Smith",
+   "tweet" : "Elasticsearch surely is one of the hottest new NoSQL products",
+   "user_id" : 1
+}
+'
+
+curl -XPUT 'http://localhost:9200/gb/tweet/11?pretty=1' -d '
+{
+   "date" : "2014-09-21",
+   "name" : "Mary Jones",
+   "tweet" : "Elasticsearch is built for the cloud, easy to scale",
+   "user_id" : 2
+}
+'
+
+curl -XPUT 'http://localhost:9200/us/tweet/12?pretty=1' -d '
+{
+   "date" : "2014-09-22",
+   "name" : "John Smith",
+   "tweet" : "Elasticsearch and I have left the honeymoon stage, and I still love her.",
+   "user_id" : 1
+}
+'
+
+curl -XPUT 'http://localhost:9200/gb/tweet/13?pretty=1' -d '
+{
+   "date" : "2014-09-23",
+   "name" : "Mary Jones",
+   "tweet" : "So yes, I am an Elasticsearch fanboy",
+   "user_id" : 2
+}
+'
+
+curl -XPUT 'http://localhost:9200/us/tweet/14?pretty=1' -d '
+{
+   "date" : "2014-09-24",
+   "name" : "John Smith",
+   "tweet" : "How many more cheesy tweets do I have to write?",
+   "user_id" : 1
+}
+'
+```
+
+
+
+```shell
+curl -XPOST 'http://10.250.140.14:9200/_bulk?pretty' -d '
+{ "create": { "_index": "us", "_type": "user", "_id": "1" }}
+{ "email" : "john@smith.com", "name" : "John Smith", "username" : "@john" }
+{ "create": { "_index": "gb", "_type": "user", "_id": "2" }}
+{ "email" : "mary@jones.com", "name" : "Mary Jones", "username" : "@mary" }
+{ "create": { "_index": "gb", "_type": "tweet", "_id": "3" }}
+{ "date" : "2014-09-13", "name" : "Mary Jones", "tweet" : "Elasticsearch means full text search has never been so easy", "user_id" : 2 }
+{ "create": { "_index": "us", "_type": "tweet", "_id": "4" }}
+{ "date" : "2014-09-14", "name" : "John Smith", "tweet" : "@mary it is not just text, it does everything", "user_id" : 1 }
+{ "create": { "_index": "gb", "_type": "tweet", "_id": "5" }}
+{ "date" : "2014-09-15", "name" : "Mary Jones", "tweet" : "However did I manage before Elasticsearch?", "user_id" : 2 }
+{ "create": { "_index": "us", "_type": "tweet", "_id": "6" }}
+{ "date" : "2014-09-16", "name" : "John Smith",  "tweet" : "The Elasticsearch API is really easy to use", "user_id" : 1 }
+{ "create": { "_index": "gb", "_type": "tweet", "_id": "7" }}
+{ "date" : "2014-09-17", "name" : "Mary Jones", "tweet" : "The Query DSL is really powerful and flexible", "user_id" : 2 }
+{ "create": { "_index": "us", "_type": "tweet", "_id": "8" }}
+{ "date" : "2014-09-18", "name" : "John Smith", "user_id" : 1 }
+{ "create": { "_index": "gb", "_type": "tweet", "_id": "9" }}
+{ "date" : "2014-09-19", "name" : "Mary Jones", "tweet" : "Geo-location aggregations are really cool", "user_id" : 2 }
+{ "create": { "_index": "us", "_type": "tweet", "_id": "10" }}
+{ "date" : "2014-09-20", "name" : "John Smith", "tweet" : "Elasticsearch surely is one of the hottest new NoSQL products", "user_id" : 1 }
+{ "create": { "_index": "gb", "_type": "tweet", "_id": "11" }}
+{ "date" : "2014-09-21", "name" : "Mary Jones", "tweet" : "Elasticsearch is built for the cloud, easy to scale", "user_id" : 2 }
+{ "create": { "_index": "us", "_type": "tweet", "_id": "12" }}
+{ "date" : "2014-09-22", "name" : "John Smith", "tweet" : "Elasticsearch and I have left the honeymoon stage, and I still love her.", "user_id" : 1 }
+{ "create": { "_index": "gb", "_type": "tweet", "_id": "13" }}
+{ "date" : "2014-09-23", "name" : "Mary Jones", "tweet" : "So yes, I am an Elasticsearch fanboy", "user_id" : 2 }
+{ "create": { "_index": "us", "_type": "tweet", "_id": "14" }}
+{ "date" : "2014-09-24", "name" : "John Smith", "tweet" : "How many more cheesy tweets do I have to write?", "user_id" : 1 }'
+```
+
+
+
+```shell
+curl -XGET '10.250.140.14:9200/_search?pretty'
+curl -XGET '10.250.140.14:9200/us/_search?pretty'
+
+curl -XGET '10.250.140.14:9200/us/_search?size=5&pretty'
+curl -XGET '10.250.140.14:9200/us/_search?size=5&from=5&pretty'
+curl -XGET '10.250.140.14:9200/us/_search?size=5&from=10&pretty'
+
+```
+
+#### [轻量搜索](https://www.elastic.co/guide/cn/elasticsearch/guide/current/search-lite.html)
+
+```shell
+# 查询在 tweet 类型中 tweet 字段包含 elasticsearch 单词的所有文档
+curl -XGET '10.250.140.14:9200/_all/tweet/_search?q=tweet:elasticsearch&pretty'
+
+# 查询在 name 字段中包含 john 并且在 tweet 字段中包含 mary 的文档
+# +name:john +tweet:mary
+curl -XGET '10.250.140.14:9200/_search?q=%2Bname%3Ajohn+%2Btweet%3Amary&pretty'
+
+# + 前缀表示必须与查询条件匹配。类似地， - 前缀表示一定不与查询条件匹配。
+# 没有 + 或者 - 的所有其他条件都是可选的——匹配的越多，文档就越相关。
+```
+
+
+
+```shell
+# 返回包含 mary 的所有文档
+curl -XGET '10.250.140.14:9200/_search?q=mary&pretty'
+
+# 针对tweents类型，并使用以下的条件：
+# name 字段中包含 mary 或者 john
+# date 值大于 2014-09-10
+# _all_ 字段包含 aggregations 或者 geo
+
+# +name:(mary john) +date:>2014-09-10 +(aggregations geo)
+
+
+
+
+```
+
+
+
+#### [映射和分析](https://www.elastic.co/guide/cn/elasticsearch/guide/current/mapping-analysis.html)
+
+```shell
+curl -XGET 'localhost:9200/_search?q=2014              # 12 results&pretty'
+curl -XGET 'localhost:9200/_search?q=2014-09-15        # 12 results !&pretty'
+curl -XGET 'localhost:9200/_search?q=date:2014-09-15   # 1  result&pretty'
+curl -XGET 'localhost:9200/_search?q=date:2014         # 0  results !&pretty'
+
+```
 
