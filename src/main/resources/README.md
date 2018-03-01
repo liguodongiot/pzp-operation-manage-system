@@ -1077,11 +1077,7 @@ curl -XPOST '10.250.140.14:9200/website/log/_bulk?pretty' -H 'Content-Type: appl
 
 ```
 
-
-
-
-
-#### [搜索——最基本的工具](https://www.elastic.co/guide/cn/elasticsearch/guide/current/search.html)
+### [搜索——最基本的工具](https://www.elastic.co/guide/cn/elasticsearch/guide/current/search.html)
 
 ```shell
 curl -XPUT 'http://localhost:9200/us/user/1?pretty=1' -d '
@@ -1286,15 +1282,583 @@ curl -XGET '10.250.140.14:9200/_search?q=mary&pretty'
 
 ```
 
-
-
-#### [映射和分析](https://www.elastic.co/guide/cn/elasticsearch/guide/current/mapping-analysis.html)
+### [映射和分析](https://www.elastic.co/guide/cn/elasticsearch/guide/current/mapping-analysis.html)
 
 ```shell
-curl -XGET 'localhost:9200/_search?q=2014              # 12 results&pretty'
-curl -XGET 'localhost:9200/_search?q=2014-09-15        # 12 results !&pretty'
-curl -XGET 'localhost:9200/_search?q=date:2014-09-15   # 1  result&pretty'
-curl -XGET 'localhost:9200/_search?q=date:2014         # 0  results !&pretty'
+curl -XGET '10.250.140.14:9200/_search?q=2014              # 12 results&pretty'
+curl -XGET '10.250.140.14:9200/_search?q=2014-09-15        # 12 results !&pretty'
+curl -XGET '10.250.140.14:9200/_search?q=date:2014-09-15   # 1  result&pretty'
+curl -XGET '10.250.140.14:9200/_search?q=date:2014         # 0  results !&pretty'
+
+```
+
+```shell
+# 测试分析器
+curl -XGET '10.250.140.14:9200/_analyze?pretty' -H 'Content-Type: application/json' -d'
+{
+  "analyzer": "standard",
+  "text": "Text to analyze"
+}
+'
+
+```
+
+
+
+```shell
+# 删除
+curl -XDELETE '10.250.140.14:9200/gb?pretty'
+
+curl -XPUT '10.250.140.14:9200/gb?pretty' -H 'Content-Type: application/json' -d'
+{
+  "mappings": {
+    "tweet" : {
+      "properties" : {
+        "tweet" : {
+          "type" :    "text",
+          "analyzer": "english"
+        },
+        "date" : {
+          "type" :   "date"
+        },
+        "name" : {
+          "type" :   "text"
+        },
+        "user_id" : {
+          "type" :   "long"
+        }
+      }
+    }
+  }
+}
+'
+
+# keyword 默认是 not_analyzed, text 默认是 analyzed 
+curl -XPUT '10.250.140.14:9200/gb/_mapping/tweet?pretty' -H 'Content-Type: application/json' -d'
+{
+  "properties" : {
+    "tag" : {
+      "type" :    "text"
+    },
+    "color" : {
+      "type" :    "keyword"
+    }
+  }
+}
+'
+
+# 默认是true ,  会创建索引, 没有创建索引不能被查询
+curl -XPUT '10.250.140.14:9200/gb/_mapping/tweet?pretty' -H 'Content-Type: application/json' -d'
+{
+  "properties" : {
+    "ageA" : {
+      "type" : "integer",
+      "index": false
+    },
+    "ageB" : {
+      "type" : "integer"
+    }
+  }
+}
+'
+
+curl -XGET '10.250.140.14:9200/gb/_mapping/tweet?pretty'
+
+
+curl -XGET '10.250.140.14:9200/gb/_analyze?pretty' -H 'Content-Type: application/json' -d'
+{
+  "field": "tweet",
+  "text": "Black-cats" 
+}
+'
+curl -XGET '10.250.140.14:9200/gb/_analyze?pretty' -H 'Content-Type: application/json' -d'
+{
+  "field": "color",
+  "text": "Black-cats" 
+}
+'
+
+curl -XPUT 'http://10.250.140.14:9200/gb/tweet/14?pretty' -d '
+{
+   "tweet" : "John Smith",
+   "ageA" : 112,
+   "ageB" : 11
+}
+'
+
+# 不能查询，因为未建索引
+curl -XGET 'http://10.250.140.14:9200/gb/tweet/_search?pretty' -d '{
+    "query" : {
+        "match" : {
+            "ageA" : 112
+        }
+    }
+}'
+
+# 可以被查询
+curl -XGET 'http://10.250.140.14:9200/gb/tweet/_search?pretty' -d '{
+    "query" : {
+        "match" : {
+            "ageB" : 11
+        }
+    }
+}'
+```
+
+
+
+#### [复杂核心域类型](https://www.elastic.co/guide/cn/elasticsearch/guide/current/complex-core-fields.html)
+
+对于数组，没有特殊的映射需求。任何域都可以包含0、1或者多个值，就像全文域分析得到多个词条。
+
+这暗示 *数组中所有的值必须是相同数据类型的* 。你不能将日期和字符串混在一起。如果你通过索引数组来创建新的域，Elasticsearch 会用数组中第一个值的数据类型作为这个域的 `类型` 。
+
+数组是以多值域 *索引的*—可以搜索，但是无序的。 在搜索的时候，你不能指定 “第一个” 或者 “最后一个”。
+
+
+
+Lucene 不理解内部对象。 Lucene 文档是由一组键值对列表组成的。
+
+
+
+### [请求体查询](https://www.elastic.co/guide/cn/elasticsearch/guide/current/full-body-search.html)
+
+
+
+#### [查询表达式](https://www.elastic.co/guide/cn/elasticsearch/guide/current/query-dsl-intro.html)
+
+```shell
+# 空搜索
+curl -XGET '10.250.140.14:9200/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+    "query": {
+        "match_all": {}
+    }
+}'
+
+# 在bool query中minimum_should_match只能紧跟在should的后面，放其他地方会出异常
+# "minimum_should_match": 1 表示至少匹配1个
+{
+    "bool": {
+        "must": { "match":   { "email": "business opportunity" }},
+        "should": [
+            { "match":       { "starred": true }},
+            { "bool": {
+                "must":      { "match": { "folder": "inbox" }},
+                "must_not":  { "match": { "spam": true }}
+            }}
+        ],
+        "minimum_should_match": 1
+    }
+}
+
+
+```
+
+
+
+#### [最重要的查询](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_most_important_queries.html)
+
+```shell
+
+# match 查询编辑
+
+# 如果你在一个全文字段上使用 match 查询，在执行查询前，它将用正确的分析器去分析查询字符串：
+
+{ "match": { "tweet": "About Search" }}
+
+# 如果在一个精确值的字段上使用它， 例如数字、日期、布尔或者一个 not_analyzed 字符串字段，
+# 那么它将会精确匹配给定的值：
+
+{ "match": { "age":    26           }}
+{ "match": { "date":   "2014-09-01" }}
+{ "match": { "public": true         }}
+{ "match": { "tag":    "full_text"  }}
+
+# 对于精确值的查询，你可能需要使用 filter 语句来取代 query，因为 filter 将会被缓存。
+
+
+
+# multi_match 查询编辑
+#multi_match 查询可以在多个字段上执行相同的 match 查询
+
+{
+    "multi_match": {
+        "query":    "full text search",
+        "fields":   [ "title", "body" ]
+    }
+}
+
+
+# range 查询编辑
+# range 查询找出那些落在指定区间内的数字或者时间
+
+{
+    "range": {
+        "age": {
+            "gte":  20,
+            "lt":   30
+        }
+    }
+}
+
+# gt 大于， gte 大于等于， lt 小于， lte 小于等于
+
+
+
+# term 查询
+# term 查询被用于精确值 匹配，这些精确值可能是数字、时间、布尔或者那些 not_analyzed 的字符串：
+
+{ "term": { "age":    26           }}
+{ "term": { "date":   "2014-09-01" }}
+{ "term": { "public": true         }}
+{ "term": { "tag":    "full_text"  }}
+
+# term 查询对于输入的文本不 分析 ，所以它将给定的值进行精确查询。
+
+# terms 查询
+# terms 查询和 term 查询一样，但它允许你指定多值进行匹配。
+# 如果这个字段包含了指定值中的任何一个值，那么这个文档满足条件：
+
+{ "terms": { "tag": [ "search", "full_text", "nosql" ] }}
+
+# 和 term 查询一样，terms 查询对于输入的文本不分析。
+# 它查询那些精确匹配的值（包括在大小写、重音、空格等方面的差异）。
+
+
+# exists 查询和 missing 查询
+# exists 查询和 missing 查询被用于查找那些指定字段中有值 (exists) 或无值 (missing) 的文档。
+# 这与SQL中的 IS_NULL (missing) 和 NOT IS_NULL (exists) 在本质上具有共性：
+
+{
+    "exists":   {
+        "field":    "title"
+    }
+}
+
+# 这些查询经常用于某个字段有值的情况和某个字段缺值的情况。
+
+```
+
+
+
+
+
+#### [组合多查询](https://www.elastic.co/guide/cn/elasticsearch/guide/current/combining-queries-together.html)
+
+`must`
+
+文档 *必须* 匹配这些条件才能被包含进来。
+
+`must_not`
+
+文档 *必须不* 匹配这些条件才能被包含进来。
+
+`should`
+
+如果满足这些语句中的任意语句，将增加 `_score` ，否则，无任何影响。它们主要用于修正每个文档的相关性得分。
+
+`filter`
+
+*必须* 匹配，但它以不评分、过滤模式来进行。这些语句对评分没有贡献，只是根据过滤标准来排除或包含文档。
+
+
+
+```shell
+# 查找 title 字段匹配 how to make millions 并且不被标识为 spam 的文档。
+# 那些被标识为 starred 或在2014之后的文档，将比另外那些文档拥有更高的排名。
+# 如果 _两者_ 都满足，那么它排名将更高
+{
+    "bool": {
+        "must":     { "match": { "title": "how to make millions" }},
+        "must_not": { "match": { "tag":   "spam" }},
+        "should": [
+            { "match": { "tag": "starred" }},
+            { "range": { "date": { "gte": "2014-01-01" }}}
+        ]
+    }
+}
+
+#  如果没有 must 语句，那么至少需要能够匹配其中的一条 should 语句。
+# 但，如果存在至少一条 must 语句，则对 should 语句的匹配没有要求。
+
+
+# 增加带过滤器（filtering）的查询编辑
+# 如果我们不想因为文档的时间而影响得分，可以用 filter 语句来重写前面的例子：
+
+{
+    "bool": {
+        "must":     { "match": { "title": "how to make millions" }},
+        "must_not": { "match": { "tag":   "spam" }},
+        "should": [
+            { "match": { "tag": "starred" }}
+        ],
+        "filter": {
+          "range": { "date": { "gte": "2014-01-01" }} 
+        }
+    }
+}
+
+
+# 将查询移到 bool 查询的 filter 语句中，这样它就自动的转成一个不评分的 filter 了
+{
+    "bool": {
+        "must":     { "match": { "title": "how to make millions" }},
+        "must_not": { "match": { "tag":   "spam" }},
+        "should": [
+            { "match": { "tag": "starred" }}
+        ],
+        "filter": {
+          "bool": { 
+              "must": [
+                  { "range": { "date": { "gte": "2014-01-01" }}},
+                  { "range": { "price": { "lte": 29.99 }}}
+              ],
+              "must_not": [
+                  { "term": { "category": "ebooks" }}
+              ]
+          }
+        }
+    }
+}
+
+
+# constant_score 查询编辑
+# 它将一个不变的常量评分应用于所有匹配的文档。
+# 它被经常用于你只需要执行一个 filter 而没有其它查询（例如，评分查询）的情况下。
+
+# term 查询被放置在 constant_score 中，转成不评分的 filter。
+# 这种方式可以用来取代只有 filter 语句的 bool 查询。
+{
+    "constant_score":   {
+        "filter": {
+            "term": { "category": "ebooks" } 
+        }
+    }
+}
+```
+
+
+
+
+
+
+
+```shell
+# 验证查询编辑
+curl -XGET '10.250.140.14:9200/gb/tweet/_validate/query?pretty' -H 'Content-Type: application/json' -d'
+{
+   "query": {
+      "tweet" : {
+         "match" : "really powerful"
+      }
+   }
+}
+'
+
+
+# 理解错误信息
+curl -XGET '10.250.140.14:9200/gb/tweet/_validate/query?explain&pretty' -H 'Content-Type: application/json' -d'
+{
+   "query": {
+      "tweet" : {
+         "match" : "really powerful"
+      }
+   }
+}
+'
+
+
+
+# 理解查询语句
+curl -XGET '10.250.140.14:9200/gb,us/_validate/query?explain&pretty' -H 'Content-Type: application/json' -d'
+{
+   "query": {
+      "match" : {
+         "tweet" : "really powerful"
+      }
+   }
+}
+'
+
+# 不同的分析器结果不同
+
+{
+  "valid" : true,
+  "_shards" : {
+    "total" : 2,
+    "successful" : 2,
+    "failed" : 0
+  },
+  "explanations" : [
+    {
+      "index" : "gb",
+      "valid" : true,
+      "explanation" : "tweet:realli tweet:power"
+    },
+    {
+      "index" : "us",
+      "valid" : true,
+      "explanation" : "tweet:really tweet:powerful"
+    }
+  ]
+}
+
+```
+
+
+
+### [排序与相关性](https://www.elastic.co/guide/cn/elasticsearch/guide/current/sorting.html)
+
+#### [排序](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_Sorting.html)
+
+```shell
+# 使用的是 filter （过滤），没有试图确定这些文档的相关性。 
+# 实际上文档将按照随机顺序返回，并且每个文档都会评为零。
+curl -XGET '10.250.140.14:9200/_search?pretty' -d '{
+    "query" : {
+        "bool" : {
+            "filter" : {
+                "term" : {
+                    "user_id" : 1
+                }
+            }
+        }
+    }
+}'
+
+# 如果评分为零对你造成了困扰，你可以使用 constant_score 查询进行替代
+# 这将让所有文档应用一个恒定分数（默认为 1 ）。
+curl -XGET '10.250.140.14:9200/_search?pretty' -d '{
+    "query" : {
+        "constant_score" : {
+            "filter" : {
+                "term" : {
+                    "user_id" : 1
+                }
+            }
+        }
+    }
+}'
+
+
+
+# 对 tweets 进行排序，最新的 tweets 排在最前。 	
+# _score 不被计算, 因为它并没有用于排序。
+curl -XGET '10.250.140.14:9200/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+    "query" : {
+        "bool" : {
+            "filter" : { "term" : { "user_id" : 1 }}
+        }
+    },
+    "sort": { "date": { "order": "desc" }}
+}
+'
+
+#_score 和 max_score 字段都是 null 。 计算 _score 的花销巨大，通常仅用于排序； 
+# 我们并不根据相关性排序，所以记录 _score 是没有意义的。如果无论如何你都要计算 _score ， 
+# 你可以将 track_scores 参数设置为 true 。
+
+
+curl -XGET '10.250.140.14:9200/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+    "query" : {
+        "bool" : {
+            "must":   { "match": { "tweet": "manage text search" }},
+            "filter" : { "term" : { "user_id" : 2 }}
+        }
+    },
+    "sort": [
+        { "date":   { "order": "desc" }},
+        { "_score": { "order": "desc" }}
+    ]
+}
+'
+# 多级排序并不一定包含 _score 。你可以根据一些不同的字段进行排序， 如地理距离或是脚本计算的特定值。
+
+# Query-string 搜索 也支持自定义排序，可以在查询字符串中使用 sort 参数：
+# GET /_search?sort=date:desc&sort=_score&q=search
+
+
+# 字段多值的排序编辑
+
+# 对于数字或日期，你可以将多值字段减为单值，这可以通过使用 min 、 max 、 avg 或是 sum 排序模式 。 
+# 例如你可以按照每个 date 字段中的最早日期进行排序，通过以下方法：
+"sort": {
+    "dates": {
+        "order": "asc",
+        "mode":  "min"
+    }
+}
+```
+
+
+
+#### [字符串排序与多字段](https://www.elastic.co/guide/cn/elasticsearch/guide/current/multi-fields.html)
+
+```shell
+"tweet": { 
+    "type":     "string",
+    "analyzer": "english",
+    "fields": {
+        "raw": { 
+            "type":  "string",
+            "index": "not_analyzed"
+        }
+    }
+}
+
+# tweet 主字段与之前的一样: 是一个 analyzed 全文字段。
+# 新的 tweet.raw 子字段是 not_analyzed.
+
+
+curl -XGET '10.250.140.14:9200/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+    "query": {
+        "match": {
+            "tweet": "elasticsearch"
+        }
+    },
+    "sort": "tweet.raw"
+}
+'
+
+```
+
+
+
+#### [什么是相关性?](https://www.elastic.co/guide/cn/elasticsearch/guide/current/relevance-intro.html)
+
+```shell
+# JSON格式
+curl -XGET '10.250.140.14:9200/_search?explain&pretty' -H 'Content-Type: application/json' -d'
+{
+   "query"   : { "match" : { "tweet" : "honeymoon" }}
+}
+'
+
+# YAML格式
+curl -XGET '10.250.140.14:9200/_search?explain&pretty&format=yaml' -H 'Content-Type: application/json' -d'
+{
+   "query"   : { "match" : { "tweet" : "honeymoon" }}
+}
+'
+
+
+# 当 explain 选项加到某一文档上时， explain api 会帮助你理解为何这个文档会被匹配，
+# 更重要的是，一个文档为何没有被匹配。
+curl -XGET '10.250.140.14:9200/us/tweet/12/_explain?pretty' -H 'Content-Type: application/json' -d'
+{
+   "query" : {
+      "bool" : {
+         "filter" : { "term" :  { "user_id" : 2           }},
+         "must" :  { "match" : { "tweet" :   "honeymoon" }}
+      }
+   }
+}
+'
+
 
 ```
 
