@@ -1,5 +1,7 @@
+## 基础入门
 
 ### company index lib
+
 ```shell
 {
 	"employee": {
@@ -1859,6 +1861,146 @@ curl -XGET '10.250.140.14:9200/us/tweet/12/_explain?pretty' -H 'Content-Type: ap
 }
 '
 
+```
+
+
+
+### [索引管理](https://www.elastic.co/guide/cn/elasticsearch/guide/current/index-management.html)
+
+#### [索引设置](https://www.elastic.co/guide/cn/elasticsearch/guide/current/index-settings.html)
+
+```shell
+curl -XPUT '10.250.140.14:9200/my_temp_index?pretty' -H 'Content-Type: application/json' -d'
+{
+    "settings": {
+        "number_of_shards" :   1,
+        "number_of_replicas" : 0
+    }
+}
+'
+
+curl -XPUT '10.250.140.14:9200/my_temp_index/_settings?pretty' -H 'Content-Type: application/json' -d'
+{
+    "number_of_replicas": 1
+}
+'
+
 
 ```
+
+
+
+
+
+#### [配置分析器](https://www.elastic.co/guide/cn/elasticsearch/guide/current/configuring-analyzers.html)
+
+```shell
+curl -XPUT '10.250.140.14:9200/spanish_docs?pretty' -H 'Content-Type: application/json' -d'
+{
+    "settings": {
+        "analysis": {
+            "analyzer": {
+                "es_std": {
+                    "type":      "standard",
+                    "stopwords": "_spanish_"
+                }
+            }
+        }
+    }
+}
+'
+
+# 10.250.140.14:9200/spanish_docs/_analyze?analyzer=es_std&pretty&text=El veloz zorro marrón
+curl -XGET 'http://10.250.140.14:9200/spanish_docs/_analyze?analyzer=es_std&pretty&text=El%20veloz%20zorro%20marr%C3%B3n'
+
+
+
+
+
+```
+
+
+
+#### [自定义分析器](https://www.elastic.co/guide/cn/elasticsearch/guide/current/custom-analyzers.html)
+
+```shell
+# 使用 html清除 字符过滤器移除HTML部分。
+# 使用一个自定义的 映射 字符过滤器把 & 替换为 " 和 " 。
+# 使用 标准 分词器分词。
+# 小写词条，使用 小写 词过滤器处理。
+# 使用自定义 停止 词过滤器移除自定义的停止词列表中包含的词。
+curl -XPUT '10.250.140.14:9200/my_index?pretty' -H 'Content-Type: application/json' -d'
+{
+    "settings": {
+        "analysis": {
+            "char_filter": {
+                "&_to_and": {
+                    "type":       "mapping",
+                    "mappings": [ "&=> and "]
+            }},
+            "filter": {
+                "my_stopwords": {
+                    "type":       "stop",
+                    "stopwords": [ "the", "a" ]
+            }},
+            "analyzer": {
+                "my_analyzer": {
+                    "type":         "custom",
+                    "char_filter":  [ "html_strip", "&_to_and" ],
+                    "tokenizer":    "standard",
+                    "filter":       [ "lowercase", "my_stopwords" ]
+            }}
+}}}
+'
+
+
+curl -XGET '10.250.140.14:9200/my_index2/_analyze?analyzer=my_analyzer&pretty' -H 'Content-Type: application/json' -d'
+{
+	"analyzer":	"my_analyzer",
+  	"text": "The quick & brown fox"
+}
+'
+
+# 将分析器应用在一个字段上
+curl -XPUT '10.250.140.14:9200/my_index/_mapping/my_type?pretty' -H 'Content-Type: application/json' -d'
+{
+    "properties": {
+        "title": {
+            "type":      "text",
+            "analyzer":  "my_analyzer"
+        }
+    }
+}
+'
+
+
+```
+
+
+
+
+
+### [分片内部原理](https://www.elastic.co/guide/cn/elasticsearch/guide/current/inside-a-shard.html)
+
+#### [近实时搜索](https://www.elastic.co/guide/cn/elasticsearch/guide/current/near-real-time.html)
+
+```shell
+# 关闭自动刷新
+curl -XPUT '10.250.140.14:9200/my_logs/_settings?pretty' -H 'Content-Type: application/json' -d '{ "refresh_interval": -1 }'
+
+# 每秒自动刷新
+curl -XPUT '10.250.140.14:9200/my_logs/_settings?pretty' -H 'Content-Type: application/json' -d '{ "refresh_interval": "1s" }'
+```
+
+
+
+## [深入搜索](https://www.elastic.co/guide/cn/elasticsearch/guide/current/search-in-depth.html)
+
+### [结构化搜索](https://www.elastic.co/guide/cn/elasticsearch/guide/current/structured-search.html)
+
+
+
+
+
+
 
