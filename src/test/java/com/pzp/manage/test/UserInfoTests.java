@@ -6,6 +6,10 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
 /**
  * <p>Project: pzp-operation-manage-system</p>
  * <p>Package: com.pzp.manage.test</p>
@@ -30,7 +34,20 @@ public class UserInfoTests {
         Object result = JSONObject.toJSON(userInfo);
         LOGGER.info(result.toString());
 
+    }
+
+    @Test
+    public void test(){
+        List<UserInfo> userInfoList = null;
+        if(Objects.nonNull(userInfoList)) {
+            for (UserInfo userInfo : userInfoList) {
+                LOGGER.info(userInfo.toString());
+            }
+        }
+
+
 
     }
+
 
 }

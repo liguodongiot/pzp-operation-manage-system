@@ -2000,7 +2000,357 @@ curl -XPUT '10.250.140.14:9200/my_logs/_settings?pretty' -H 'Content-Type: appli
 
 
 
+#### [精确值查找](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_finding_exact_values.html)
 
 
 
+```shell
+curl -XPOST '10.250.140.14:9200/my_store/products/_bulk?pretty' -H 'Content-Type: application/json' -d'
+{ "index": { "_id": 1 }}
+{ "price" : 10, "productID" : "XHDK-A-1293-#fJ3" }
+{ "index": { "_id": 2 }}
+{ "price" : 20, "productID" : "KDKE-B-9947-#kL5" }
+{ "index": { "_id": 3 }}
+{ "price" : 30, "productID" : "JODL-X-1937-#pV7" }
+{ "index": { "_id": 4 }}
+{ "price" : 30, "productID" : "QQPX-R-3956-#aD8" }
+'
+
+
+# 会使用 constant_score 查询以非评分模式来执行 term 查询并以一作为统一评分
+curl -XGET '10.250.140.14:9200/my_store/products/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+    "query" : {
+        "constant_score" : { 
+            "filter" : {
+                "term" : { 
+                    "price" : 20
+                }
+            }
+        }
+    }
+}
+'
+
+
+# 精确查找
+curl -XGET '10.250.140.14:9200/my_store/products/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+    "query" : {
+        "constant_score" : {
+            "filter" : {
+                "term" : {
+                    "productID" : "XHDK-A-1293-#fJ3"
+                }
+            }
+        }
+    }
+}
+'
+
+
+
+# 匹配 无打分
+curl -XGET '10.250.140.14:9200/my_store/products/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+    "query" : {
+        "constant_score" : {
+            "filter" : {
+                "match" : {
+                    "productID" : "XHDK-A-1293-#fJ3"
+                }
+            }
+        }
+    }
+}
+'
+
+# 匹配 打分
+curl -XGET '10.250.140.14:9200/my_store/products/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+ "query" : {
+    "match" : {
+    "productID" : "XHDK-A-1293-#fJ3"
+    }
+  }
+}
+'
+
+# 
+curl -XGET '10.250.140.14:9200/my_store/_analyze?pretty' -H 'Content-Type: application/json' -d'
+{
+  "field": "productID",
+  "text": "XHDK-A-1293-#fJ3"
+}
+'
+
+
+```
+
+#### [组合过滤器](https://www.elastic.co/guide/cn/elasticsearch/guide/current/combining-filters.html)
+
+```shell
+curl -XGET 'localhost:9200/my_store/products/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+   "query" : {
+      "filtered" : { 
+         "filter" : {
+            "bool" : {
+              "should" : [
+                 { "term" : {"price" : 20}}, 
+                 { "term" : {"productID" : "XHDK-A-1293-#fJ3"}} 
+              ],
+              "must_not" : {
+                 "term" : {"price" : 30} 
+              }
+           }
+         }
+      }
+   }
+}
+'
+
+# 嵌套布尔过滤器
+curl -XGET 'localhost:9200/my_store/products/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+   "query" : {
+      "filtered" : {
+         "filter" : {
+            "bool" : {
+              "should" : [
+                { "term" : {"productID" : "KDKE-B-9947-#kL5"}}, 
+                { "bool" : { 
+                  "must" : [
+                    { "term" : {"productID" : "JODL-X-1937-#pV7"}}, 
+                    { "term" : {"price" : 30}} 
+                  ]
+                }}
+              ]
+           }
+         }
+      }
+   }
+}
+'
+
+```
+
+
+
+#### [查找多个精确值](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_finding_multiple_exact_values.html)
+
+```shell
+curl -XGET 'localhost:9200/my_store/products/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+    "query" : {
+        "constant_score" : {
+            "filter" : {
+                "terms" : { 
+                    "price" : [20, 30]
+                }
+            }
+        }
+    }
+}
+'
+```
+
+
+
+
+
+#### [范围](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_ranges.html)
+
+
+
+```json
+# 数值
+curl -XGET '10.250.140.14:9200/my_store/products/_search?pretty' -H 'Content-Type: application/json' -d '{
+    "query" : {
+        "constant_score" : {
+            "filter" : {
+                "range" : {
+                    "price" : {
+                        "gte" : 20,
+                        "lt"  : 40
+                    }
+                }
+            }
+        }
+    }
+}'
+
+
+# 日期范围
+"range" : {
+    "timestamp" : {
+        "gt" : "now-1h"
+    }
+}
+
+
+"range" : {
+    "timestamp" : {
+        "gt" : "2014-01-01 00:00:00",
+        "lt" : "2014-01-01 00:00:00||+1M" 
+    }
+}
+
+# 字符串范围
+"range" : {
+    "title" : {
+        "gte" : "a",
+        "lt" :  "b"
+    }
+}
+
+```
+
+
+
+#### [处理 Null 值](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_dealing_with_null_values.html)
+
+```shell
+curl -XGET 'localhost:9200/my_index/posts/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+    "query" : {
+        "constant_score" : {
+            "filter" : {
+                "exists" : { "field" : "tags" }
+            }
+        }
+    }
+}
+'
+
+# 缺失查询
+curl -XGET 'localhost:9200/my_index/posts/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+    "query" : {
+        "constant_score" : {
+            "filter": {
+                "missing" : { "field" : "tags" }
+            }
+        }
+    }
+}
+'
+
+```
+
+### [全文搜索](https://www.elastic.co/guide/cn/elasticsearch/guide/current/full-text-search.html)
+
+
+
+#### [基于词项与基于全文](https://www.elastic.co/guide/cn/elasticsearch/guide/current/term-vs-full-text.html)
+
+
+
+#### [匹配查询](https://www.elastic.co/guide/cn/elasticsearch/guide/current/match-query.html)
+
+#### [多词查询](https://www.elastic.co/guide/cn/elasticsearch/guide/current/match-multi-word.html)
+
+```shell
+# 提高精度
+# match 查询还可以接受 operator 操作符作为输入参数，
+# 默认情况下该操作符是 or 。我们可以将它修改成 and 让所有指定词项都必须匹配。
+curl -XGET '10.250.140.14:9200/my_index/my_type/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+    "query": {
+        "match": {
+            "title": {      
+                "query":    "BROWN DOG!",
+                "operator": "and"
+            }
+        }
+    }
+}
+'
+# 控制精度
+# match 查询支持 minimum_should_match 最小匹配参数， 这让我们可以指定必须匹配的词项数用来
+# 表示一个文档是否相关。我们可以将其设置为某个具体数字，更常用的做法是将其设置为一个百分数，
+# 因为我们无法控制用户搜索时输入的单词数量
+curl -XGET 'localhost:9200/my_index/my_type/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+  "query": {
+    "match": {
+      "title": {
+        "query":                "quick brown dog",
+        "minimum_should_match": "75%"
+      }
+    }
+  }
+}
+'
+
+# 当给定百分比的时候， minimum_should_match 会做合适的事情：在之前三词项的示例中， 75% 会自动被截断成 # 66.6% ，即三个里面两个词。无论这个值设置成什么，至少包含一个词项的文档才会被认为是匹配的。
+
+```
+
+
+
+```shell
+{
+    "match": {
+        "title": {
+            "query":                "quick brown fox",
+            "minimum_should_match": "75%"
+        }
+    }
+}
+
+<===>
+
+{
+  "bool": {
+    "should": [
+      { "term": { "title": "brown" }},
+      { "term": { "title": "fox"   }},
+      { "term": { "title": "quick" }}
+    ],
+    "minimum_should_match": 2 
+  }
+}
+```
+
+
+
+#### [查询语句提升权重](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_boosting_query_clauses.html)
+
+```shell
+
+# boost 参数被用来提升一个语句的相对权重（ boost 值大于 1 ）或
+# 降低相对权重（ boost 值处于 0 到 1 之间），但是这种提升或降低并不是线性的
+curl -XGET 'localhost:9200/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+    "query": {
+        "bool": {
+            "must": {
+                "match": {  
+                    "content": {
+                        "query":    "full text search",
+                        "operator": "and"
+                    }
+                }
+            },
+            "should": [
+                { "match": {
+                    "content": {
+                        "query": "Elasticsearch",
+                        "boost": 3 
+                    }
+                }},
+                { "match": {
+                    "content": {
+                        "query": "Lucene",
+                        "boost": 2 
+                    }
+                }}
+            ]
+        }
+    }
+}
+'
+
+```
 

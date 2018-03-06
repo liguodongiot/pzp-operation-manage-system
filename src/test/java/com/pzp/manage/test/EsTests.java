@@ -2,6 +2,7 @@ package com.pzp.manage.test;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.pzp.manage.bean.Tokens;
 import com.pzp.manage.bean.UserInfo;
 import com.pzp.manage.es.*;
 import com.pzp.manage.setting.UserInfoIndexSettings;
@@ -177,7 +178,7 @@ public class EsTests extends BaseApplicationTest{
         LOGGER.info("searchHitArr:{}", JSONObject.toJSON(searchHitArr));
     }
 
-
+    ////////////////////////////////
     @Test
     public void testAnalyze(){
         String url = "http://10.250.140.14:9200/_analyze?pretty";
@@ -198,6 +199,44 @@ public class EsTests extends BaseApplicationTest{
         LOGGER.info("List:{}" ,list.toString());
     }
 
+    @Test
+    public void parseToken(){
+        String url = "http://10.250.140.14:9200/_analyze?pretty";
+        String json = "{\n" +
+                "  \"analyzer\": \"ik_max_word\",\n" +
+                "  \"text\": \"中华人民共和国国歌\"\n" +
+                "}";
+
+        String result = HttpUtil.doPostJson(url, json);
+        Tokens tokens = JSONObject.parseObject(result,Tokens.class);
+
+        LOGGER.info("List:{}" ,tokens.toString());
+    }
+
+
+    ////////////////////////////////
+    @Test
+    public void testMatch(){
+        String url = "http://10.250.140.14:9200/alibaba_alias/employee/_search?pretty";
+        String json = "{\n" +
+                "    \"query\" : {\n" +
+                "        \"match\" : {\n" +
+                "            \"last_name\" : \"哈登\"\n" +
+                "        }\n" +
+                "    }\n" +
+                "}";
+        List<String> list = new ArrayList<>();
+        String result = HttpUtil.doPostJson(url, json);
+        JSONObject parse = JSONObject.parseObject(result);
+        JSONArray tokenArr = parse.getJSONArray("tokens");
+        for (int i = 0; i < tokenArr.size(); i++) {
+            JSONObject jsonObject = tokenArr.getJSONObject(i);
+            String token = jsonObject.get("token").toString();
+            list.add(token);
+        }
+
+        LOGGER.info("List:{}" ,list.toString());
+    }
 
 
     @Test
