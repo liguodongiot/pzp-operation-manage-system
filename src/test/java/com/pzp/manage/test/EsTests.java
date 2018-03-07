@@ -2,7 +2,7 @@ package com.pzp.manage.test;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import com.pzp.manage.bean.Tokens;
+import com.pzp.manage.bean.es.Tokens;
 import com.pzp.manage.bean.UserInfo;
 import com.pzp.manage.es.*;
 import com.pzp.manage.setting.UserInfoIndexSettings;

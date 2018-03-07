@@ -1,4 +1,4 @@
-package com.pzp.manage.bean;
+package com.pzp.manage.bean.es;
 
 import lombok.Data;
 
@@ -10,20 +10,16 @@ import lombok.Data;
  *
  * @author guodong.li
  * @version 1.0.0
- * @date 2018/3/6 20:48 星期二
+ * @date 2018/3/6 21:24 星期二
  */
 @Data
-public class EsResult {
+public class Shards {
 
-    private Integer took;
+    private int total;
 
-    private Boolean timedOut;
+    private int successful;
 
-    private Shards shards;
-
-    private EsHits hits;
-
-
+    private int failed;
 
 
 }

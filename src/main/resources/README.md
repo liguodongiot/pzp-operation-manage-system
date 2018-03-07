@@ -223,7 +223,6 @@ curl -XGET '10.250.140.14:9200/alibaba_alias/employee/_search?pretty' -H 'Conten
     }
 }'
 
-
 ```
 
 
@@ -268,7 +267,6 @@ curl -XGET '10.250.140.14:9200/alibaba_alias/employee/_search?pretty' -H 'Conten
     }
 }
 '
-
 
 
 ```
@@ -1302,7 +1300,6 @@ curl -XGET '10.250.140.14:9200/_analyze?pretty' -H 'Content-Type: application/js
   "text": "Text to analyze"
 }
 '
-
 ```
 
 
@@ -2352,5 +2349,28 @@ curl -XGET 'localhost:9200/_search?pretty' -H 'Content-Type: application/json' -
 }
 '
 
+```
+
+
+
+
+
+#### [控制分析-analysis](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_controlling_analysis.html)
+
+
+
+#### [被破坏的相关度！](https://www.elastic.co/guide/cn/elasticsearch/guide/current/relevance-is-broken.html)
+
+```shell
+# dfs 是指 分布式频率搜索
+curl -XGET '10.250.140.14:9200/alibaba_alias/employee/_search?pretty&search_type=dfs_query_then_fetch' -H 'Content-Type: application/json' -d'
+{
+    "query" : {
+        "match" : {
+            "about" : "rock climbing"
+        }
+    }
+}
+'
 ```
 

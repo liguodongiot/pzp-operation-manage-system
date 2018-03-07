@@ -1,16 +1,15 @@
 package com.pzp.manage.util;
 
 
-import java.io.IOException;
-
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.fasterxml.jackson.annotation.JsonInclude.Include.*;
+import java.io.IOException;
+
+import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 
 /**
  * <p>Project: pzp-operation-manage-system</p>

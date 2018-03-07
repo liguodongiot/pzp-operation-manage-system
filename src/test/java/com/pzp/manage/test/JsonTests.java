@@ -1,6 +1,8 @@
 package com.pzp.manage.test;
 
-import com.pzp.manage.bean.EsResult;
+import com.pzp.manage.bean.es.EsIndexFail;
+import com.pzp.manage.bean.es.EsIndexSuccess;
+import com.pzp.manage.bean.es.EsResult;
 import com.pzp.manage.bean.User;
 import com.pzp.manage.util.JsonUtil;
 import org.junit.Test;
@@ -18,7 +20,6 @@ import org.junit.Test;
 
 import com.alibaba.fastjson.JSONObject;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import org.springframework.cglib.beans.BeanMap;
 
 import java.io.IOException;
 import java.util.Map;
@@ -44,7 +45,7 @@ public class JsonTests {
     }
 
     @Test
-    public void test(){
+    public void testSearch(){
         String result = "{\n" +
                 "  \"took\" : 1,\n" +
                 "  \"timed_out\" : false,\n" +
@@ -77,6 +78,69 @@ public class JsonTests {
         User  user = esResult.getHits().getHits().get(0).getSourceAsBean(User.class);
         System.out.println(esResult.toString());
     }
+
+    @Test
+    public void testEsSuccess(){
+        String result = "{\n" +
+                "  \"acknowledged\" : true,\n" +
+                "  \"shards_acknowledged\" : true\n" +
+                "}\n";
+        EsIndexSuccess esResult = JSONObject.parseObject(result, EsIndexSuccess.class);
+        System.out.println(esResult.toString());
+
+    }
+
+    @Test
+    public void testEsFail(){
+        String result = "{\n" +
+                "  \"error\" : {\n" +
+                "    \"root_cause\" : [\n" +
+                "      {\n" +
+                "        \"type\" : \"index_already_exists_exception\",\n" +
+                "        \"reason\" : \"index [gb/lk326oGyT-mittYoouml5g] already exists\",\n" +
+                "        \"index_uuid\" : \"lk326oGyT-mittYoouml5g\",\n" +
+                "        \"index\" : \"gb\"\n" +
+                "      }\n" +
+                "    ],\n" +
+                "    \"type\" : \"index_already_exists_exception\",\n" +
+                "    \"reason\" : \"index [gb/lk326oGyT-mittYoouml5g] already exists\",\n" +
+                "    \"index_uuid\" : \"lk326oGyT-mittYoouml5g\",\n" +
+                "    \"index\" : \"gb\"\n" +
+                "  },\n" +
+                "  \"status\" : 400\n" +
+                "}";
+        EsIndexFail esResult = JSONObject.parseObject(result, EsIndexFail.class);
+        System.out.println(esResult.toString());
+    }
+
+
+    @Test
+    public void testEsFail2(){
+        String result = "{\n" +
+                "  \"error\" : {\n" +
+                "    \"root_cause\" : [\n" +
+                "      {\n" +
+                "        \"type\" : \"index_not_found_exception\",\n" +
+                "        \"reason\" : \"no such index\",\n" +
+                "        \"resource.type\" : \"index_or_alias\",\n" +
+                "        \"resource.id\" : \"gb\",\n" +
+                "        \"index_uuid\" : \"_na_\",\n" +
+                "        \"index\" : \"gb\"\n" +
+                "      }\n" +
+                "    ],\n" +
+                "    \"type\" : \"index_not_found_exception\",\n" +
+                "    \"reason\" : \"no such index\",\n" +
+                "    \"resource.type\" : \"index_or_alias\",\n" +
+                "    \"resource.id\" : \"gb\",\n" +
+                "    \"index_uuid\" : \"_na_\",\n" +
+                "    \"index\" : \"gb\"\n" +
+                "  },\n" +
+                "  \"status\" : 404\n" +
+                "}\n";
+        EsIndexFail esResult = JSONObject.parseObject(result, EsIndexFail.class);
+        System.out.println(esResult.toString());
+    }
+
 }
 
 

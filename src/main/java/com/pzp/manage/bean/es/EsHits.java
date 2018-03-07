@@ -1,4 +1,4 @@
-package com.pzp.manage.bean;
+package com.pzp.manage.bean.es;
 
 import lombok.Data;
 
