@@ -1,5 +1,6 @@
 package com.pzp.manage.bean.es;
 
+import com.alibaba.fastjson.annotation.JSONField;
 import lombok.Data;
 
 /**
@@ -23,5 +24,10 @@ public class RootCause {
 
     private String index;
 
+    @JSONField(name="resource.type")
+    private String resourceType;
+
+    @JSONField(name="resource.id")
+    private String resourceId;
 
 }

@@ -1306,9 +1306,9 @@ curl -XGET '10.250.140.14:9200/_analyze?pretty' -H 'Content-Type: application/js
 
 ```shell
 # 删除
-curl -XDELETE '10.250.140.14:9200/gb?pretty'
+curl -i -XDELETE '10.250.140.14:9200/gb?pretty'
 
-curl -XPUT '10.250.140.14:9200/gb?pretty' -H 'Content-Type: application/json' -d'
+curl -i -XPUT '10.250.140.14:9200/gb?pretty' -H 'Content-Type: application/json' -d'
 {
   "mappings": {
     "tweet" : {
@@ -2373,4 +2373,114 @@ curl -XGET '10.250.140.14:9200/alibaba_alias/employee/_search?pretty&search_type
 }
 '
 ```
+
+
+
+
+
+### [多字段搜索](https://www.elastic.co/guide/cn/elasticsearch/guide/current/multi-field-search.html)
+
+
+
+
+
+#### [多字符串查询](https://www.elastic.co/guide/cn/elasticsearch/guide/current/multi-query-strings.html)
+
+```shell
+curl -XGET 'localhost:9200/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+  "query": {
+    "bool": {
+      "should": [
+        { "match": { "title":  "War and Peace" }},
+        { "match": { "author": "Leo Tolstoy"   }},
+        { "bool":  {
+          "should": [
+            { "match": { "translator": "Constance Garnett" }},
+            { "match": { "translator": "Louise Maude"      }}
+          ]
+        }}
+      ]
+    }
+  }
+}
+'
+
+# 设置语句的权重
+curl -XGET 'localhost:9200/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+  "query": {
+    "bool": {
+      "should": [
+        { "match": { 
+            "title":  {
+              "query": "War and Peace",
+              "boost": 2
+        }}},
+        { "match": { 
+            "author":  {
+              "query": "Leo Tolstoy",
+              "boost": 2
+        }}},
+        { "bool":  { 
+            "should": [
+              { "match": { "translator": "Constance Garnett" }},
+              { "match": { "translator": "Louise Maude"      }}
+            ]
+        }}
+      ]
+    }
+  }
+}
+'
+
+```
+
+
+
+#### [最佳字段](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_best_fields.html)
+
+```shell
+# dis_max 查询编辑
+{
+    "query": {
+        "dis_max": {
+            "queries": [
+                { "match": { "title": "Brown fox" }},
+                { "match": { "body":  "Brown fox" }}
+            ]
+        }
+    }
+}
+```
+
+
+
+
+
+#### [最佳字段查询调优](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_tuning_best_fields_queries.html)
+
+`tie_breaker` 参数提供了一种 `dis_max` 和 `bool` 之间的折中选择，它的评分方式如下：
+
+1. 获得最佳匹配语句的评分 `_score` 。
+2. 将其他匹配语句的评分结果与 `tie_breaker` 相乘。
+3. 对以上评分求和并规范化。
+
+```shell
+{
+    "query": {
+        "dis_max": {
+            "queries": [
+                { "match": { "title": "Quick pets" }},
+                { "match": { "body":  "Quick pets" }}
+            ],
+            "tie_breaker": 0.3
+        }
+    }
+}
+```
+
+
+
+`tie_breaker` 可以是 `0` 到 `1` 之间的浮点数，其中 `0` 代表使用 `dis_max` 最佳匹配语句的普通逻辑， `1` 表示所有匹配语句同等重要。最佳的精确值需要根据数据与查询调试得出，但是合理值应该与零接近（处于 `0.1 - 0.4` 之间），这样就不会颠覆 `dis_max` 最佳匹配性质的根本。
 

@@ -138,6 +138,7 @@ public class JsonTests {
                 "  \"status\" : 404\n" +
                 "}\n";
         EsIndexFail esResult = JSONObject.parseObject(result, EsIndexFail.class);
+//        JSONObject esResult = JSONObject.parseObject(result);
         System.out.println(esResult.toString());
     }
 
