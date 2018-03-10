@@ -2200,7 +2200,6 @@ curl -XGET '10.250.140.14:9200/my_store/products/_search?pretty' -H 'Content-Typ
         "lt" :  "b"
     }
 }
-
 ```
 
 
@@ -2483,4 +2482,328 @@ curl -XGET 'localhost:9200/_search?pretty' -H 'Content-Type: application/json' -
 
 
 `tie_breaker` 可以是 `0` 到 `1` 之间的浮点数，其中 `0` 代表使用 `dis_max` 最佳匹配语句的普通逻辑， `1` 表示所有匹配语句同等重要。最佳的精确值需要根据数据与查询调试得出，但是合理值应该与零接近（处于 `0.1 - 0.4` 之间），这样就不会颠覆 `dis_max` 最佳匹配性质的根本。
+
+
+
+#### [multi_match 查询](https://www.elastic.co/guide/cn/elasticsearch/guide/current/multi-match-query.html)
+
+```shell
+{
+  "dis_max": {
+    "queries":  [
+      {
+        "match": {
+          "title": {
+            "query": "Quick brown fox",
+            "minimum_should_match": "30%"
+          }
+        }
+      },
+      {
+        "match": {
+          "body": {
+            "query": "Quick brown fox",
+            "minimum_should_match": "30%"
+          }
+        }
+      },
+    ],
+    "tie_breaker": 0.3
+  }
+}
+
+
+# 用 multi_match 重写
+{
+    "multi_match": {
+        "query":                "Quick brown fox",
+        "type":                 "best_fields", 
+        "fields":               [ "title", "body" ],
+        "tie_breaker":          0.3,
+        "minimum_should_match": "30%" 
+    }
+}
+
+# 查询字段名称的模糊匹配编辑
+
+{
+    "multi_match": {
+        "query":  "Quick brown fox",
+        "fields": "*_title"
+    }
+}
+
+# 提升单个字段的权重编辑
+# 使用 ^ 字符语法为单个字段提升权重，在字段名称的末尾添加 ^boost ， 其中 boost 是一个浮点数
+{
+    "multi_match": {
+        "query":  "Quick brown fox",
+        "fields": [ "*_title", "chapter_title^2" ] 
+    }
+}
+
+```
+
+
+
+
+
+#### [多数字段](https://www.elastic.co/guide/cn/elasticsearch/guide/current/most-fields.html)
+
+相同的文本索引到其他字段从而提供更为精确的匹配。一个字段可能是为词干未提取过的版本，另一个字段可能是变音过的原始词，第三个可能使用 *shingles* 提供 [词语相似性](https://www.elastic.co/guide/cn/elasticsearch/guide/current/proximity-matching.html) 信息。这些附加的字段可以看成提高每个文档的相关度评分的信号 *signals* ，能匹配字段的越多越好。
+
+```shell
+# 多字段映射
+# 对我们的字段索引两次： 一次使用词干模式以及一次非词干模式。
+curl -XDELETE '10.250.140.14:9200/my_index?pretty'
+curl -XPUT '10.250.140.14:9200/my_index?pretty' -H 'Content-Type: application/json' -d'
+{
+    "settings": { "number_of_shards": 1 }, 
+    "mappings": {
+        "my_type": {
+            "properties": {
+                "title": { 
+                    "type":     "string",
+                    "analyzer": "english",
+                    "fields": {
+                        "std":   { 
+                            "type":     "string",
+                            "analyzer": "standard"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+'
+
+curl -XPUT '10.250.140.14:9200/my_index/my_type/1?pretty' -H 'Content-Type: application/json' -d'
+{ "title": "My rabbit jumps" }
+'
+curl -XPUT '10.250.140.14:9200/my_index/my_type/2?pretty' -H 'Content-Type: application/json' -d'
+{ "title": "Jumping jack rabbits" }
+'
+
+
+
+curl -XGET '10.250.140.14:9200/my_index/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+   "query": {
+        "match": {
+            "title": "jumping rabbits"
+        }
+    }
+}
+'
+
+# 如果只是查询 title.std 字段，那么只有文档 2 是匹配的。
+curl -XGET '10.250.140.14:9200/my_index/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+   "query": {
+        "match": {
+            "title.std": "jumping rabbits"
+        }
+    }
+}
+'
+
+curl -XGET '10.250.140.14:9200/my_index/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+   "query": {
+        "multi_match": {
+            "query":  "jumping rabbits",
+            "type":   "most_fields", 
+            "fields": [ "title", "title.std" ]
+        }
+    }
+}'
+
+# 用广度匹配字段 title 包括尽可能多的文档——以提升召回率——同时又使用字段 
+# title.std 作为 信号 将相关度更高的文档置于结果顶部。
+
+# 每个字段对于最终评分的贡献可以通过自定义值 boost 来控制。
+# 比如，使 title 字段更为重要，这样同时也降低了其他信号字段的作用
+curl -XGET '10.250.140.14:9200/my_index/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+   "query": {
+        "multi_match": {
+            "query":       "jumping rabbits",
+            "type":        "most_fields",
+            "fields":      [ "title^10", "title.std" ] 
+        }
+    }
+}
+'
+
+
+```
+
+
+
+#### [跨字段实体搜索](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_cross_fields_entity_search.html)
+
+```
+{
+  "query": {
+    "bool": {
+      "should": [
+        { "match": { "street":    "Poland Street W1V" }},
+        { "match": { "city":      "Poland Street W1V" }},
+        { "match": { "country":   "Poland Street W1V" }},
+        { "match": { "postcode":  "Poland Street W1V" }}
+      ]
+    }
+  }
+}
+
+
+# 采用 multi_match 查询， 将 type 设置成 most_fields 然后告诉 Elasticsearch 合并所有匹配字段的评分
+{
+  "query": {
+    "multi_match": {
+      "query":       "Poland Street W1V",
+      "type":        "most_fields",
+      "fields":      [ "street", "city", "country", "postcode" ]
+    }
+  }
+}
+
+```
+
+**most_fields 方式的问题**
+
+用 most_fields 这种方式搜索也存在某些问题，这些问题并不会马上显现：
+
+它是为多数字段匹配 任意 词设计的，而不是在 所有字段 中找到最匹配的。
+它不能使用 operator 或 minimum_should_match 参数来降低次相关结果造成的长尾效应。
+词频对于每个字段是不一样的，而且它们之间的相互影响会导致不好的排序结果。
+
+
+
+#### [字段中心式查询](https://www.elastic.co/guide/cn/elasticsearch/guide/current/field-centric.html)
+
+
+
+#### [自定义 _all 字段](https://www.elastic.co/guide/cn/elasticsearch/guide/current/custom-all.html)
+
+```shell
+curl -XPUT '10.250.140.14:9200/my_index20?pretty' -H 'Content-Type: application/json' -d'
+{
+    "mappings": {
+        "person": {
+            "properties": {
+                "first_name": {
+                    "type":     "string",
+                    "copy_to":  "full_name" 
+                },
+                "last_name": {
+                    "type":     "string",
+                    "copy_to":  "full_name" 
+                },
+                "full_name": {
+                    "type":     "string"
+                }
+            }
+        }
+    }
+}
+'
+
+
+
+curl -XPUT '10.250.140.14:9200/my_index22?pretty' -H 'Content-Type: application/json' -d'
+{
+    "mappings": {
+        "person": {
+            "properties": {
+                "first_name": {
+                    "type" : "text",
+                    "copy_to": "full_name", 
+                    "fields": {
+                        "raw": {
+                            "type" : "keyword"
+                        }
+                    }
+                },
+                "full_name": {
+                    "type":     "string"
+                }
+            }
+        }
+    }
+}'
+
+```
+
+
+
+#### [cross-fields 跨字段查询](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_cross_fields_queries.html)
+
+```shell
+# 字段中心式（field-centric）与词中心式（term-centric）这两种查询方式的不同
+# 字段中心式
+curl -XGET '10.250.140.14:9200/gb/_validate/query?explain&pretty' -H 'Content-Type: application/json' -d'
+{
+    "query": {
+        "multi_match": {
+            "query":       "peter smith",
+            "type":        "most_fields",
+            "operator":    "and", 
+            "fields":      [ "first_name", "last_name" ]
+        }
+    }
+}
+'
+
+# 词中心式
+curl -XGET '10.250.140.14:9200/gb/_validate/query?explain&pretty' -H 'Content-Type: application/json' -d'
+{
+    "query": {
+        "multi_match": {
+            "query":       "peter smith",
+            "type":        "cross_fields", 
+            "operator":    "and",
+            "fields":      [ "first_name", "last_name" ]
+        }
+    }
+}
+'
+
+
+```
+
+**按字段提高权重**
+
+```shell
+# 要用 title 和 description 字段搜索图书，可能希望为 title 分配更多的权重
+GET /books/_search
+{
+    "query": {
+        "multi_match": {
+            "query":       "peter smith",
+            "type":        "cross_fields",
+            "fields":      [ "title^2", "description" ] 
+        }
+    }
+}
+```
+
+
+
+自定义单字段查询是否能够优于多字段查询，取决于在多字段查询与单字段自定义 `_all` 之间代价的权衡，即哪种解决方案会带来更大的性能优化就选择哪一种。
+
+
+
+
+
+#### [Exact-Value 精确值字段](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_exact_value_fields.html)
+
+
+
+
+
+
+
+
 
