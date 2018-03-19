@@ -1,4 +1,12 @@
+
+
+[TOC]
+
+
+
 ## 基础入门
+
+
 
 ### company index lib
 
@@ -2770,7 +2778,6 @@ curl -XGET '10.250.140.14:9200/gb/_validate/query?explain&pretty' -H 'Content-Ty
 }
 '
 
-
 ```
 
 **按字段提高权重**
@@ -2801,9 +2808,824 @@ GET /books/_search
 
 
 
+###  [近似匹配](https://www.elastic.co/guide/cn/elasticsearch/guide/current/proximity-matching.html)
+
+
+
+#### [短语匹配](https://www.elastic.co/guide/cn/elasticsearch/guide/current/phrase-matching.html)
+
+```shell
+curl -XGET '10.250.140.14:9200/my_index/my_type/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+    "query": {
+        "match_phrase": {
+            "title": "quick brown fox"
+        }
+    }
+}
+'
+
+# match_phrase 查询同样可写成一种类型为 phrase 的 match 查询
+
+"match": {
+    "title": {
+        "query": "quick brown fox",
+        "type":  "phrase"
+    }
+}
+```
+
+​	
+
+```shell
+curl -XGET 'http://10.250.140.14:9200/_analyze?analyzer=standard&text=Quick%20brown%20fox&pretty'
+```
+
+
+
+
+
+#### [混合起来](https://www.elastic.co/guide/cn/elasticsearch/guide/current/slop.html)
+
+```shell
+curl -XGET '10.250.140.14:9200/my_index/my_type/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+    "query": {
+        "match_phrase": {
+            "title": {
+                "query": "quick fox",
+                "slop":  1
+            }
+        }
+    }
+}
+'
+
+```
 
 
 
 
 
 
+
+
+
+```shell
+
+
+curl -XDELETE '10.250.140.14:9200/my_index/groups/?pretty'
+curl -XPUT '10.250.140.14:9200/my_index/_mapping/groups?pretty' -H 'Content-Type: application/json' -d'
+{
+    "properties": {
+        "names": {
+            "type":                "string",
+            "position_increment_gap": 100
+        }
+    }
+}
+'
+
+curl -XPUT '10.250.140.14:9200/my_index/groups/1?pretty' -H 'Content-Type: application/json' -d'
+{
+    "names": [ "John Abraham", "Lincoln Smith"]
+}
+'
+
+curl -XGET '10.250.140.14:9200/my_index/groups/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+    "query": {
+        "match_phrase": {
+            "names": "Abraham Lincoln"
+        }
+    }
+}
+'
+```
+
+
+
+
+
+#### [越近越好](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_closer_is_better.html)
+
+```
+curl -XPOST 'localhost:9200/my_index/my_type/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+   "query": {
+      "match_phrase": {
+         "title": {
+            "query": "quick dog",
+            "slop":  50 
+         }
+      }
+   }
+}
+'
+
+```
+
+
+
+#### [使用邻近度提高相关度](https://www.elastic.co/guide/cn/elasticsearch/guide/current/proximity-relevance.html)
+
+```
+curl -XGET 'localhost:9200/my_index/my_type/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+  "query": {
+    "bool": {
+      "must": {
+        "match": { 
+          "title": {
+            "query":                "quick brown fox",
+            "minimum_should_match": "30%"
+          }
+        }
+      },
+      "should": {
+        "match_phrase": { 
+          "title": {
+            "query": "quick brown fox",
+            "slop":  50
+          }
+        }
+      }
+    }
+  }
+}
+'
+
+```
+
+
+
+#### [性能优化](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_Improving_Performance.html)
+
+```shell
+curl -XGET 'localhost:9200/my_index/my_type/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+    "query": {
+        "match": {  
+            "title": {
+                "query":                "quick brown fox",
+                "minimum_should_match": "30%"
+            }
+        }
+    },
+    "rescore": {
+        "window_size": 50, 
+        "query": {         
+            "rescore_query": {
+                "match_phrase": {
+                    "title": {
+                        "query": "quick brown fox",
+                        "slop":  50
+                    }
+                }
+            }
+        }
+    }
+}
+'
+
+```
+
+
+
+#### [寻找相关词](https://www.elastic.co/guide/cn/elasticsearch/guide/current/shingles.html)
+
+```shell
+# 创建分析器时使用 shingle 语汇单元过滤器
+curl -XDELETE '10.250.140.14:9200/my_index?pretty'
+curl -XPUT '10.250.140.14:9200/my_index?pretty' -H 'Content-Type: application/json' -d'
+{
+    "settings": {
+        "number_of_shards": 1,  
+        "analysis": {
+            "filter": {
+                "my_shingle_filter": {
+                    "type":             "shingle",
+                    "min_shingle_size": 2, 
+                    "max_shingle_size": 2, 
+                    "output_unigrams":  false   
+                }
+            },
+            "analyzer": {
+                "my_shingle_analyzer": {
+                    "type":             "custom",
+                    "tokenizer":        "standard",
+                    "filter": [
+                        "lowercase",
+                        "my_shingle_filter" 
+                    ]
+                }
+            }
+        }
+    }
+}
+'
+
+
+
+curl -XGET 'http://10.250.140.14:9200/my_index555/_analyze?analyzer=my_shingle_analyzer&text=Sue%20ate%20the%20alligator&pretty'
+
+
+
+# 多字段
+curl -XDELETE '10.250.140.14:9200/my_index?pretty'
+curl -XPUT '10.250.140.14:9200/my_index/_mapping/my_type?pretty' -H 'Content-Type: application/json' -d'
+{
+    "my_type": {
+        "properties": {
+            "title": {
+                "type": "string",
+                "fields": {
+                    "shingles": {
+                        "type":     "string",
+                        "analyzer": "my_shingle_analyzer"
+                    }
+                }
+            }
+        }
+    }
+}'
+
+
+curl -XPOST '10.250.140.14:9200/my_index/my_type/_bulk?pretty' -H 'Content-Type: application/json' -d '
+{ "index": { "_id": 1 }}
+{ "title": "Sue ate the alligator" }
+{ "index": { "_id": 2 }}
+{ "title": "The alligator ate Sue" }
+{ "index": { "_id": 3 }}
+{ "title": "Sue never goes anywhere without her alligator skin purse" }
+'
+
+
+curl -XGET 'http://10.250.140.14:9200/my_index/my_type/_search?pretty' -d '
+{
+   "query": {
+        "match": {
+           "title": "the hungry alligator ate sue"
+        }
+   }
+}'
+
+
+curl -XGET 'http://10.250.140.14:9200/my_index/my_type/_search?pretty' -d '{
+   "query": {
+      "bool": {
+         "must": {
+            "match": {
+               "title": "the hungry alligator ate sue"
+            }
+         },
+         "should": {
+            "match": {
+               "title.shingles": "the hungry alligator ate sue"
+            }
+         }
+      }
+   }
+}'
+```
+
+
+
+
+
+### [部分匹配](https://www.elastic.co/guide/cn/elasticsearch/guide/current/partial-matching.html)
+
+
+
+#### [邮编与结构化数据](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_postcodes_and_structured_data.html)
+
+
+
+```shell
+curl -XDELETE '10.250.140.14:9200/my_index?pretty'
+curl -XPUT '10.250.140.14:9200/my_index?pretty' -H 'Content-Type: application/json' -d'
+{
+    "mappings": {
+        "address": {
+            "properties": {
+                "postcode": {
+                    "type":  "string",
+                    "index": "not_analyzed"
+                }
+            }
+        }
+    }
+}
+'
+
+curl -XPUT '10.250.140.14:9200/my_index/address/1?pretty' -H 'Content-Type: application/json' -d'
+{ "postcode": "W1V 3DG" }
+'
+curl -XPUT '10.250.140.14:9200/my_index/address/2?pretty' -H 'Content-Type: application/json' -d'
+{ "postcode": "W2F 8HW" }
+'
+curl -XPUT '10.250.140.14:9200/my_index/address/3?pretty' -H 'Content-Type: application/json' -d'
+{ "postcode": "W1F 7HW" }
+'
+curl -XPUT '10.250.140.14:9200/my_index/address/4?pretty' -H 'Content-Type: application/json' -d'
+{ "postcode": "WC1N 1LZ" }
+'
+curl -XPUT '10.250.140.14:9200/my_index/address/5?pretty' -H 'Content-Type: application/json' -d'
+{ "postcode": "SW5 0BE" }
+'
+
+
+```
+
+
+
+#### [prefix 前缀查询](https://www.elastic.co/guide/cn/elasticsearch/guide/current/prefix-query.html)
+
+```shell
+curl -XGET '10.250.140.14:9200/my_index/address/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+    "query": {
+        "prefix": {
+            "postcode": "W1"
+        }
+    }
+}
+'
+```
+
+
+
+#### [通配符与正则表达式查询](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_wildcard_and_regexp_queries.html)
+
+```shell
+# 使用标准的 shell 通配符查询： ? 匹配任意字符， * 匹配 0 或多个字符。
+
+curl -XGET '10.250.140.14:9200/my_index/address/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+    "query": {
+        "wildcard": {
+            "postcode": "W?F*HW" 
+        }
+    }
+}
+'
+
+# 想匹配只以 W 开始并跟随一个数字的所有邮编
+curl -XGET '10.250.140.14:9200/my_index/address/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+    "query": {
+        "regexp": {
+            "postcode": "W[0-9].+" 
+        }
+    }
+}
+'
+
+# prefix 、 wildcard 和 regexp 查询是基于词操作的，如果用它们来查询 analyzed 字段，
+# 它们会检查字段里面的每个词，而不是将字段作为整体来处理。
+
+```
+
+
+
+
+
+#### [查询时输入即搜索](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_query_time_search_as_you_type.html)
+
+```shell
+{
+    "match_phrase_prefix" : {
+        "brand" : "johnnie walker bl"
+    }
+}
+
+
+# 接受 slop 参数让相对词序位置不那么严格
+{
+    "match_phrase_prefix" : {
+        "brand" : {
+            "query": "walker johnnie bl", 
+            "slop":  10
+        }
+    }
+}
+
+
+# 参数 max_expansions 控制着可以与前缀匹配的词的数量
+{
+    "match_phrase_prefix" : {
+        "brand" : {
+            "query":          "johnnie walker bl",
+            "max_expansions": 50
+        }
+    }
+}
+
+
+
+```
+
+
+
+#### [索引时优化](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_index_time_optimizations.html)
+
+
+
+#### [Ngrams 在部分匹配的应用](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_ngrams_for_partial_matching.html)
+
+
+
+#### [索引时输入即搜索](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_index_time_search_as_you_type.html)
+
+```shell
+
+curl -XDELETE '10.250.140.14:9200/my_index111?pretty'
+curl -XPUT '10.250.140.14:9200/my_index111?pretty' -H 'Content-Type: application/json' -d'
+{
+    "settings": {
+        "number_of_shards": 1, 
+        "analysis": {
+            "filter": {
+                "autocomplete_filter": { 
+                    "type":     "edge_ngram",
+                    "min_gram": 1,
+                    "max_gram": 20
+                }
+            },
+            "analyzer": {
+                "autocomplete": {
+                    "type":      "custom",
+                    "tokenizer": "standard",
+                    "filter": [
+                        "lowercase",
+                        "autocomplete_filter" 
+                    ]
+                }
+            }
+        }
+    }
+}
+'
+
+
+
+curl -XGET '10.250.140.14:9200/my_index111/_analyze?pretty' -H 'Content-Type: application/json' -d '{
+  "analyzer": "autocomplete",
+  "text": "quick brown"
+}'
+
+
+
+
+
+-------
+curl -XPUT '10.250.140.14:9200/my_index111/_mapping/my_type?pretty' -H 'Content-Type: application/json' -d'
+{
+    "my_type": {
+        "properties": {
+            "name": {
+                "type":     "string",
+                "analyzer": "autocomplete"
+            }
+        }
+    }
+}
+'
+
+
+curl -XPOST '10.250.140.14:9200/my_index111/my_type/_bulk?pretty' -H 'Content-Type: application/json' -d'
+{ "index": { "_id": 1            }}
+{ "name": "Brown foxes"    }
+{ "index": { "_id": 2            }}
+{ "name": "Yellow furballs" }
+'
+
+curl -XGET '10.250.140.14:9200/my_index111/_mapping?pretty'
+
+curl -XGET '10.250.140.14:9200/my_index111/my_type/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+    "query": {
+        "match": {
+            "name": "brown fo"
+        }
+    }
+}
+'
+
+curl -XGET '10.250.140.14:9200/my_index111/my_type/_validate/query?explain&pretty' -H 'Content-Type: application/json' -d'
+{
+    "query": {
+        "match": {
+            "name": "brown fo"
+        }
+    }
+}
+'
+
+# 我们需要保证倒排索引表中包含边界 n-grams 的每个词，
+# 但是我们只想匹配用户输入的完整词组（ brown 和 fo ）， 
+# 可以通过在索引时使用 autocomplete 分析器，并在搜索时使用 standard 标准分析器来实现这种想法
+curl -XGET '10.250.140.14:9200/my_index111/my_type/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+    "query": {
+        "match": {
+            "name": {
+                "query":    "brown fo",
+                "analyzer": "standard" 
+            }
+        }
+    }
+}
+'
+
+
+curl -XPUT '10.250.140.14:9200/my_index111/my_type/_mapping?pretty' -H 'Content-Type: application/json' -d'
+{
+	"my_type": {
+		"properties": {
+			"name": {
+				"type": "text",
+				"analyzer": "autocomplete",
+				"search_analyzer": "standard"
+			}
+		}
+	}
+}
+'
+
+curl -XGET '10.250.140.14:9200/my_index111/my_type/_validate/query?explain&pretty' -H 'Content-Type: application/json' -d'
+{
+    "query": {
+        "match": {
+            "name": "brown fo"
+        }
+    }
+}
+'
+
+
+# postcode_index 分析器使用 postcode_filter 将邮编转换成边界 n-gram 形式。
+# postcode_search 分析器可以将搜索词看成 not_analyzed 未分析的。
+{
+    "analysis": {
+        "filter": {
+            "postcode_filter": {
+                "type":     "edge_ngram",
+                "min_gram": 1,
+                "max_gram": 8
+            }
+        },
+        "analyzer": {
+            "postcode_index": { 
+                "tokenizer": "keyword",
+                "filter":    [ "postcode_filter" ]
+            },
+            "postcode_search": { 
+                "tokenizer": "keyword"
+            }
+        }
+    }
+}
+```
+
+
+
+#### [Ngrams 在复合词的应用](https://www.elastic.co/guide/cn/elasticsearch/guide/current/ngrams-compound-words.html)
+
+```shell
+curl -XDELETE '10.250.140.14:9200/my_index?pretty'
+curl -XPUT '10.250.140.14:9200/my_index?pretty' -H 'Content-Type: application/json' -d'
+{
+    "settings": {
+        "analysis": {
+            "filter": {
+                "trigrams_filter": {
+                    "type":     "ngram",
+                    "min_gram": 3,
+                    "max_gram": 3
+                }
+            },
+            "analyzer": {
+                "trigrams": {
+                    "type":      "custom",
+                    "tokenizer": "standard",
+                    "filter":   [
+                        "lowercase",
+                        "trigrams_filter"
+                    ]
+                }
+            }
+        }
+    },
+    "mappings": {
+        "my_type": {
+            "properties": {
+                "text": {
+                    "type":     "string",
+                    "analyzer": "trigrams" 
+                }
+            }
+        }
+    }
+}
+'
+
+
+
+curl -XGET '10.250.140.14:9200/my_index/_analyze?pretty' -H 'Content-Type: application/json' -d '{
+  "analyzer": "trigrams",
+  "text": "Weißkopfseeadler"
+}'
+
+
+curl -XPOST '10.250.140.14:9200/my_index/my_type/_bulk?pretty' -H 'Content-Type: application/json' -d'
+{ "index": { "_id": 1 }}
+{ "text": "Aussprachewörterbuch" }
+{ "index": { "_id": 2 }}
+{ "text": "Militärgeschichte" }
+{ "index": { "_id": 3 }}
+{ "text": "Weißkopfseeadler" }
+{ "index": { "_id": 4 }}
+{ "text": "Weltgesundheitsorganisation" }
+{ "index": { "_id": 5 }}
+{ "text": "Rindfleischetikettierungsüberwachungsaufgabenübertragungsgesetz" }
+'
+
+
+curl -XGET '10.250.140.14:9200/my_index/my_type/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+    "query": {
+        "match": {
+            "text": "Adler"
+        }
+    }
+}
+'
+
+
+
+curl -XGET '10.250.140.14:9200/my_index/my_type/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+    "query": {
+        "match": {
+            "text": {
+                "query":                "Gesundheit",
+                "minimum_should_match": "80%"
+            }
+        }
+    }
+}
+'
+
+```
+
+
+
+### [控制相关度](https://www.elastic.co/guide/cn/elasticsearch/guide/current/controlling-relevance.html)
+
+
+
+#### [相关度评分背后的理论](https://www.elastic.co/guide/cn/elasticsearch/guide/current/scoring-theory.html)
+
+```shell
+# 将参数 index_options 设置为 docs 可以禁用词频统计及词频位置，这个映射的字段不会计算词的出现次数，
+# 对于短语或近似查询也不可用。要求精确查询的 not_analyzed 字符串字段会默认使用该设置。
+PUT /my_index
+{
+  "mappings": {
+    "doc": {
+      "properties": {
+        "text": {
+          "type":          "string",
+          "index_options": "docs" 
+        }
+      }
+    }
+  }
+}
+
+
+# 这个字段不会将字段长度归一值考虑在内，长字段和短字段会以相同长度计算评分。
+PUT /my_index
+{
+  "mappings": {
+    "doc": {
+      "properties": {
+        "text": {
+          "type": "string",
+          "norms": { "enabled": false } 
+        }
+      }
+    }
+  }
+}
+```
+
+
+
+
+
+#### [Lucene 的实用评分函数](https://www.elastic.co/guide/cn/elasticsearch/guide/current/practical-scoring-function.html)
+
+
+
+
+
+#### [查询时权重提升](https://www.elastic.co/guide/cn/elasticsearch/guide/current/query-time-boosting.html)
+
+```shell
+GET /_search
+{
+  "query": {
+    "bool": {
+      "should": [
+        {
+          "match": {
+            "title": {
+              "query": "quick brown fox",
+              "boost": 2 
+            }
+          }
+        },
+        {
+          "match": { 
+            "content": "quick brown fox"
+          }
+        }
+      ]
+    }
+  }
+}
+
+# 提升索引权重
+GET /docs_2014_*/_search 
+{
+  "indices_boost": { 
+    "docs_2014_10": 3,
+    "docs_2014_09": 2
+  },
+  "query": {
+    "match": {
+      "text": "quick brown fox"
+    }
+  }
+}
+```
+
+
+
+#### [使用查询结构修改相关度](https://www.elastic.co/guide/cn/elasticsearch/guide/current/query-scoring.html)
+
+
+
+
+
+#### [Not Quite Not](https://www.elastic.co/guide/cn/elasticsearch/guide/current/not-quite-not.html)
+
+```shell
+GET /_search
+{
+  "query": {
+    "bool": {
+      "must": {
+        "match": {
+          "text": "apple"
+        }
+      },
+      "must_not": {
+        "match": {
+          "text": "pie tart fruit crumble tree"
+        }
+      }
+    }
+  }
+}
+
+# 权重提升查询编辑
+GET /_search
+{
+  "query": {
+    "boosting": {
+      "positive": {
+        "match": {
+          "text": "apple"
+        }
+      },
+      "negative": {
+        "match": {
+          "text": "pie tart fruit crumble tree"
+        }
+      },
+      "negative_boost": 0.5
+    }
+  }
+}
+```
+
+
+
+
+
+
+
+**Elasticsearch: 权威指南：**<https://www.elastic.co/guide/cn/elasticsearch/guide/current/index.html>
