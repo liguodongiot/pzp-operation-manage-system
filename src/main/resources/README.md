@@ -1959,7 +1959,7 @@ curl -XPUT '10.250.140.14:9200/my_index?pretty' -H 'Content-Type: application/js
 '
 
 
-curl -XGET '10.250.140.14:9200/my_index2/_analyze?analyzer=my_analyzer&pretty' -H 'Content-Type: application/json' -d'
+curl -XGET '10.250.140.14:9200/my_index2/_analyze?pretty' -H 'Content-Type: application/json' -d'
 {
 	"analyzer":	"my_analyzer",
   	"text": "The quick & brown fox"
@@ -1977,7 +1977,6 @@ curl -XPUT '10.250.140.14:9200/my_index/_mapping/my_type?pretty' -H 'Content-Typ
     }
 }
 '
-
 
 ```
 
@@ -3623,6 +3622,200 @@ GET /_search
 ```
 
 
+
+#### [忽略 TF/IDF](https://www.elastic.co/guide/cn/elasticsearch/guide/current/ignoring-tfidf.html)
+
+
+
+
+
+
+
+```shell
+GET /_search
+{
+  "query": {
+    "bool": {
+      "should": [
+        { "constant_score": {
+          "query": { "match": { "description": "wifi" }}
+        }},
+        { "constant_score": {
+          "query": { "match": { "description": "garden" }}
+        }},
+        { "constant_score": {
+          "query": { "match": { "description": "pool" }}
+        }}
+      ]
+    }
+  }
+}
+
+
+
+GET /_search
+{
+  "query": {
+    "bool": {
+      "should": [
+        { "constant_score": {
+          "query": { "match": { "description": "wifi" }}
+        }},
+        { "constant_score": {
+          "query": { "match": { "description": "garden" }}
+        }},
+        { "constant_score": {
+          "boost":   2 
+          "query": { "match": { "description": "pool" }}
+        }}
+      ]
+    }
+  }
+}
+
+
+
+GET /_search
+{
+  "query": {
+    "bool": {
+      "should": [
+        { "constant_score": {
+          "query": { "match": { "features": "wifi" }}
+        }},
+        { "constant_score": {
+          "query": { "match": { "features": "garden" }}
+        }},
+        { "constant_score": {
+          "boost":   2
+          "query": { "match": { "features": "pool" }}
+        }}
+      ]
+    }
+  }
+}
+```
+
+
+
+#### [function_score 查询](https://www.elastic.co/guide/cn/elasticsearch/guide/current/function-score-query.html)
+
+
+
+
+
+#### [按受欢迎度提升权重](https://www.elastic.co/guide/cn/elasticsearch/guide/current/boosting-by-popularity.html)
+
+
+
+```shell
+PUT /blogposts/post/1
+{
+  "title":   "About popularity",
+  "content": "In this post we will talk about...",
+  "votes":   6
+}
+
+GET /blogposts/post/_search
+{
+  "query": {
+    "function_score": { 
+      "query": { 
+        "multi_match": {
+          "query":    "popularity",
+          "fields": [ "title", "content" ]
+        }
+      },
+      "field_value_factor": { 
+        "field": "votes" 
+      }
+    }
+  }
+}
+
+
+GET /blogposts/post/_search
+{
+  "query": {
+    "function_score": {
+      "query": {
+        "multi_match": {
+          "query":    "popularity",
+          "fields": [ "title", "content" ]
+        }
+      },
+      "field_value_factor": {
+        "field":    "votes",
+        "modifier": "log1p" 
+      }
+    }
+  }
+}
+
+# factor
+GET /blogposts/post/_search
+{
+  "query": {
+    "function_score": {
+      "query": {
+        "multi_match": {
+          "query":    "popularity",
+          "fields": [ "title", "content" ]
+        }
+      },
+      "field_value_factor": {
+        "field":    "votes",
+        "modifier": "log1p",
+        "factor":   2 
+      }
+    }
+  }
+}
+
+# boost_mode
+GET /blogposts/post/_search
+{
+  "query": {
+    "function_score": {
+      "query": {
+        "multi_match": {
+          "query":    "popularity",
+          "fields": [ "title", "content" ]
+        }
+      },
+      "field_value_factor": {
+        "field":    "votes",
+        "modifier": "log1p",
+        "factor":   0.1
+      },
+      "boost_mode": "sum" 
+    }
+  }
+}
+
+
+# max_boost
+GET /blogposts/post/_search
+{
+  "query": {
+    "function_score": {
+      "query": {
+        "multi_match": {
+          "query":    "popularity",
+          "fields": [ "title", "content" ]
+        }
+      },
+      "field_value_factor": {
+        "field":    "votes",
+        "modifier": "log1p",
+        "factor":   0.1
+      },
+      "boost_mode": "sum",
+      "max_boost":  1.5 
+    }
+  }
+}
+```
 
 
 
