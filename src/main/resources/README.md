@@ -3821,4 +3821,122 @@ GET /blogposts/post/_search
 
 
 
+
+
+#### [过滤集提升权重](https://www.elastic.co/guide/cn/elasticsearch/guide/current/function-score-filters.html)
+
+```shell
+GET /_search
+{
+  "query": {
+    "function_score": {
+      "filter": { 
+        "term": { "city": "Barcelona" }
+      },
+      "functions": [ 
+        {
+          "filter": { "term": { "features": "wifi" }}, 
+          "weight": 1
+        },
+        {
+          "filter": { "term": { "features": "garden" }}, 
+          "weight": 1
+        },
+        {
+          "filter": { "term": { "features": "pool" }}, 
+          "weight": 2 
+        }
+      ],
+      "score_mode": "sum", 
+    }
+  }
+}
+```
+
+
+
+#### [随机评分](https://www.elastic.co/guide/cn/elasticsearch/guide/current/random-scoring.html)
+
+```shell
+GET /_search
+{
+  "query": {
+    "function_score": {
+      "filter": {
+        "term": { "city": "Barcelona" }
+      },
+      "functions": [
+        {
+          "filter": { "term": { "features": "wifi" }},
+          "weight": 1
+        },
+        {
+          "filter": { "term": { "features": "garden" }},
+          "weight": 1
+        },
+        {
+          "filter": { "term": { "features": "pool" }},
+          "weight": 2
+        },
+        {
+          "random_score": { 
+            "seed":  "the users session id" 
+          }
+        }
+      ],
+      "score_mode": "sum"
+    }
+  }
+}
+```
+
+
+
+
+
+#### [越近越好](https://www.elastic.co/guide/cn/elasticsearch/guide/current/decay-functions.html)
+
+```shell
+GET /_search
+{
+  "query": {
+    "function_score": {
+      "functions": [
+        {
+          "gauss": {
+            "location": { 
+              "origin": { "lat": 51.5, "lon": 0.12 },
+              "offset": "2km",
+              "scale":  "3km"
+            }
+          }
+        },
+        {
+          "gauss": {
+            "price": { 
+              "origin": "50", 
+              "offset": "50",
+              "scale":  "20"
+            }
+          },
+          "weight": 2 
+        }
+      ]
+    }
+  }
+}
+```
+
+
+
+#### [理解 price 价格语句](https://www.elastic.co/guide/cn/elasticsearch/guide/current/Understanding-the-price-Clause.html)
+
+
+
+
+
+#### [脚本评分](https://www.elastic.co/guide/cn/elasticsearch/guide/current/script-score.html)
+
+
+
 **Elasticsearch: 权威指南：**<https://www.elastic.co/guide/cn/elasticsearch/guide/current/index.html>
