@@ -251,4 +251,23 @@ public class EsTests extends BaseApplicationTest{
     }
 
 
+    @Test
+    public void testGetBulkDocument(){
+        String[] ids = {"6","6","5","3","5"};
+        List<Map<String, Object>> mapList = EsUtils.queryDocumentByUids(esContext.getClient(), settings.getName(), settings.getType(), ids);
+        System.out.println(mapList);
+    }
+
+    @Test
+    public void testGetDocumentById(){
+        String[] ids = {"6","6","5","3","5"};
+        for (int i = 0; i < ids.length; i++) {
+            Map<String, Object>  stringObjectMap = EsUtils.getDocumentById(esContext.getClient(), settings.getName(), settings.getType(), ids[i]);
+            System.out.println(stringObjectMap);
+        }
+
+    }
+
+
+
 }

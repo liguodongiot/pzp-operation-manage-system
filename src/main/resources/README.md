@@ -2088,7 +2088,6 @@ curl -XGET '10.250.140.14:9200/my_store/_analyze?pretty' -H 'Content-Type: appli
 }
 '
 
-
 ```
 
 #### [组合过滤器](https://www.elastic.co/guide/cn/elasticsearch/guide/current/combining-filters.html)
@@ -3475,7 +3474,6 @@ curl -XGET '10.250.140.14:9200/my_index/my_type/_search?pretty' -H 'Content-Type
     }
 }
 '
-
 ```
 
 
@@ -3936,6 +3934,172 @@ GET /_search
 
 
 #### [脚本评分](https://www.elastic.co/guide/cn/elasticsearch/guide/current/script-score.html)
+
+
+
+
+
+#### [可插拔的相似度算法](https://www.elastic.co/guide/cn/elasticsearch/guide/current/pluggable-similarites.html)
+
+
+
+#### [更改相似度](https://www.elastic.co/guide/cn/elasticsearch/guide/current/changing-similarities.html)
+
+```shell
+PUT /my_index
+{
+  "mappings": {
+    "doc": {
+      "properties": {
+        "title": {
+          "type":       "string",
+          "similarity": "BM25" 
+        },
+        "body": {
+          "type":       "string",
+          "similarity": "default" 
+        }
+      }
+  }
+}
+
+
+
+
+PUT /my_index
+{
+  "settings": {
+    "similarity": {
+      "my_bm25": { 
+        "type": "BM25",
+        "b":    0 
+      }
+    }
+  },
+  "mappings": {
+    "doc": {
+      "properties": {
+        "title": {
+          "type":       "string",
+          "similarity": "my_bm25" 
+        },
+        "body": {
+          "type":       "string",
+          "similarity": "BM25" 
+        }
+      }
+    }
+  }
+}
+```
+
+
+
+
+
+#### [调试相关度是最后 10% 要做的事情](https://www.elastic.co/guide/cn/elasticsearch/guide/current/relevance-conclusion.html)
+
+
+
+## [处理人类语言](https://www.elastic.co/guide/cn/elasticsearch/guide/current/languages.html)
+
+
+
+### [开始处理各种语言](https://www.elastic.co/guide/cn/elasticsearch/guide/current/language-intro.html)
+
+
+
+#### [使用语言分析器](https://www.elastic.co/guide/cn/elasticsearch/guide/current/using-language-analyzers.html)
+
+```shell
+
+curl -XDELETE '10.250.140.14:9200/my_index?pretty'
+curl -XPUT '10.250.140.14:9200/my_index?pretty' -H 'Content-Type: application/json' -d'
+{
+  "mappings": {
+    "blog": {
+      "properties": {
+        "title": {
+          "type":     "string",
+          "analyzer": "english" 
+        }
+      }
+    }
+  }
+}'
+
+
+
+curl -XDELETE '10.250.140.14:9200/my_index?pretty'
+curl -XPUT '10.250.140.14:9200/my_index?pretty' -H 'Content-Type: application/json' -d'
+{
+  "mappings": {
+    "blog": {
+      "properties": {
+        "title": { 
+          "type": "text",
+          "fields": {
+            "english": { 
+              "type":     "text",
+              "analyzer": "english"
+            },
+            "keyword": {
+              "ignore_above": 256,
+              "type": "keyword"
+            }
+          }
+        }
+      }
+    }
+  }
+}'
+
+
+
+curl -XPUT '10.250.140.14:9200/my_index/blog/1?pretty'  -d '{
+	"title": "Im happy for this fox"
+}'
+
+
+curl -XPUT '10.250.140.14:9200/my_index/blog/2?pretty' -d '{
+	"title": "Im not happy about my fox problem"
+}'
+
+
+curl -XGET '10.250.140.14:9200/my_index/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+  "query": {
+    "multi_match": {
+      "type":     "most_fields", 
+      "query":    "not happy foxes",
+      "fields": [ "title", "title.english","title.keyword" ]
+    }
+  }
+}'
+
+curl -XGET '10.250.140.14:9200/my_index/_mapping?pretty'
+
+curl -XGET '10.250.140.14:9200/my_index/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+    "query" : {
+        "constant_score" : {
+            "filter" : {
+                "term" : {
+                    "title.keyword" : "Im happy for this fox"
+                }
+            }
+        }
+    }
+}
+'
+
+```
+
+
+
+#### [配置语言分析器](https://www.elastic.co/guide/cn/elasticsearch/guide/current/configuring-language-analyzers.html)
+
+
 
 
 

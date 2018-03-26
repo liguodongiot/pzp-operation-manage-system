@@ -21,6 +21,7 @@ import org.elasticsearch.action.admin.indices.settings.put.UpdateSettingsRespons
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteResponse;
+import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
@@ -41,14 +42,13 @@ import org.elasticsearch.index.reindex.DeleteByQueryAction;
 import org.elasticsearch.index.reindex.DeleteByQueryRequestBuilder;
 import org.elasticsearch.script.ScriptType;
 import org.elasticsearch.script.mustache.SearchTemplateRequestBuilder;
+import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * <p>Project: pzp-operation-manage-system</p>
@@ -357,6 +357,39 @@ public final class EsUtils {
 //        }
 //
 //    }
+
+    public static List<Map<String, Object>> queryDocumentByUids(TransportClient client, String name,String type, String[] ids) {
+        SearchResponse response = client.prepareSearch(name).setTypes(type)
+                .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
+                .setQuery(QueryBuilders.idsQuery().types(type).addIds(ids))
+                .setFrom(0)
+                .setSize(ids.length)
+                .execute()
+                .actionGet();
+
+        SearchHits hits = response.getHits();
+        List<Map<String, Object>> mapList = new ArrayList<>();
+        if (null != hits && hits.getTotalHits() > 0) {
+            for (SearchHit searchHit : hits) {
+                Map<String, Object> source = searchHit.getSource();
+                mapList.add(source);
+            }
+
+        } else {
+            LOGGER.info("没有查询到任何内容！");
+        }
+        return mapList;
+    }
+
+
+    public static Map<String, Object> getDocumentById(TransportClient client,String index, String type, String id){
+        GetResponse response = client.prepareGet(index, type, id)
+                .execute()
+                .actionGet();
+        Map<String, Object> source = response.getSource();
+        return source;
+    }
+
 
 
     /**

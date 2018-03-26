@@ -296,6 +296,14 @@ match query，搜索的时候，首先会解析查询字符串，进行分词，
 
 
 
+#### 查询类型SearchType
+
+
+
+
+
+
+
 ### 分词
 
 #### ik_max_word 和 ik_smart 什么区别?
