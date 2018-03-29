@@ -4092,12 +4092,318 @@ curl -XGET '10.250.140.14:9200/my_index/_search?pretty' -H 'Content-Type: applic
     }
 }
 '
-
 ```
 
 
 
 #### [配置语言分析器](https://www.elastic.co/guide/cn/elasticsearch/guide/current/configuring-language-analyzers.html)
+
+#### [混合语言的陷阱](https://www.elastic.co/guide/cn/elasticsearch/guide/current/language-pitfalls.html)
+
+
+
+
+
+```shell
+PUT /blogs-en
+{
+	"mappings": {
+		"post": {
+			"properties": {
+				"title": {
+					"type": "string",
+					"fields": {
+						"stemmed": {
+							"type": "string",
+							"analyzer": "english"
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+PUT /blogs-fr
+{
+	"mappings": {
+		"post": {
+			"properties": {
+				"title": {
+					"type": "string",
+					"fields": {
+						"stemmed": {
+							"type": "string",
+							"analyzer": "french"
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+
+
+GET /blogs-*/post/_search 
+{
+    "query": {
+        "multi_match": {
+            "query":   "deja vu",
+            "fields":  [ "title", "title.stemmed" ] 
+            "type":    "most_fields"
+        }
+    },
+    "indices_boost": { 
+        "blogs-en": 3,
+        "blogs-fr": 2
+    }
+}
+```
+
+
+
+#### [每个域一种语言](https://www.elastic.co/guide/cn/elasticsearch/guide/current/one-lang-fields.html)
+
+
+
+#### [混合语言域](https://www.elastic.co/guide/cn/elasticsearch/guide/current/mixed-lang-fields.html)
+
+```shell
+PUT /movies
+{
+  "mappings": {
+    "title": {
+      "properties": {
+        "title": { 
+          "type": "string",
+          "fields": {
+            "de": { 
+              "type":     "string",
+              "analyzer": "german"
+            },
+            "en": { 
+              "type":     "string",
+              "analyzer": "english"
+            },
+            "fr": { 
+              "type":     "string",
+              "analyzer": "french"
+            },
+            "es": { 
+              "type":     "string",
+              "analyzer": "spanish"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+
+PUT /movies
+{
+  "settings": {
+    "analysis": {...} 
+  },
+  "mappings": {
+    "title": {
+      "properties": {
+        "title": {
+          "type": "string",
+          "fields": {
+            "de": {
+              "type":     "string",
+              "analyzer": "german"
+            },
+            "en": {
+              "type":     "string",
+              "analyzer": "english"
+            },
+            "fr": {
+              "type":     "string",
+              "analyzer": "french"
+            },
+            "es": {
+              "type":     "string",
+              "analyzer": "spanish"
+            },
+            "general": { 
+              "type":     "string",
+              "analyzer": "trigrams"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+
+GET /movies/movie/_search
+{
+    "query": {
+        "multi_match": {
+            "query":    "club de la lucha",
+            "fields": [ "title*^1.5", "title.general" ], 
+            "type":     "most_fields",
+            "minimum_should_match": "75%" 
+        }
+    }
+}
+
+```
+
+
+
+
+
+### [词汇识别](https://www.elastic.co/guide/cn/elasticsearch/guide/current/identifying-words.html)
+
+
+
+#### [标准分析器](https://www.elastic.co/guide/cn/elasticsearch/guide/current/standard-analyzer.html)
+
+```shell
+{
+    "type":      "custom",
+    "tokenizer": "standard",
+    "filter":  [ "lowercase", "stop" ]
+}
+```
+
+
+
+#### [标准分词器](https://www.elastic.co/guide/cn/elasticsearch/guide/current/standard-tokenizer.html)
+
+```shell
+
+# http://10.250.140.14:9200/_analyze?pretty=true&tokenizer=whitespace&text=You're the 1st runner home!
+
+
+# http://10.250.140.14:9200/_analyze?pretty=true&tokenizer=standard&text=You're my 'favorite'.
+
+# uax_url_email 分词器和 standard 分词器工作方式极其相同。 
+# 区别只在于它能识别 email 地址和 URLs 并输出为单个语汇单元。
+# http://10.250.140.14:9200/_analyze?pretty=true&tokenizer=standard&text=joe-bloggs@foo-bar.com
+# http://10.250.140.14:9200/_analyze?pretty=true&tokenizer=uax_url_email&text=joe-bloggs@foo-bar.com
+```
+
+
+
+#### [整理输入文本](https://www.elastic.co/guide/cn/elasticsearch/guide/current/char-filters.html)
+
+```shell
+curl -XGET '10.250.140.14:9200/_analyze?pretty' -H 'Content-Type: application/json' -d '{
+  "analyzer": "standard",
+  "text": "<p>Some d&eacute;j&agrave; vu <a href=\"http://somedomain.com>\">website</a>"
+}'
+
+
+curl -XGET '10.250.140.14:9200/_analyze?pretty=true&analyzer=standard&char_filter=html_strip' -H 'Content-Type: application/json' -d '{
+  "text": "<p>Some d&eacute;j&agrave; vu <a href=\"http://somedomain.com>\">website</a>"
+}'
+
+
+
+PUT /my_index
+{
+    "settings": {
+        "analysis": {
+            "analyzer": {
+                "my_html_analyzer": {
+                    "tokenizer":     "standard",
+                    "char_filter": [ "html_strip" ]
+                }
+            }
+        }
+    }
+}
+
+GET /my_index/_analyze?analyzer=my_html_analyzer
+<p>Some d&eacute;j&agrave; vu <a href="http://somedomain.com>">website</a>
+
+
+
+
+PUT /my_index
+{
+  "settings": {
+    "analysis": {
+      "char_filter": { 
+        "quotes": {
+          "type": "mapping",
+          "mappings": [ 
+            "\\u0091=>\\u0027",
+            "\\u0092=>\\u0027",
+            "\\u2018=>\\u0027",
+            "\\u2019=>\\u0027",
+            "\\u201B=>\\u0027"
+          ]
+        }
+      },
+      "analyzer": {
+        "quotes_analyzer": {
+          "tokenizer":     "standard",
+          "char_filter": [ "quotes" ] 
+        }
+      }
+    }
+  }
+}
+
+
+GET /my_index/_analyze?analyzer=quotes_analyzer
+You’re my ‘favorite’ M‛Coy
+
+
+
+
+
+
+
+
+```
+
+
+
+### [归一化词元](https://www.elastic.co/guide/cn/elasticsearch/guide/current/token-normalization.html)
+
+#### [举个例子](https://www.elastic.co/guide/cn/elasticsearch/guide/current/lowercase-token-filter.html)
+
+```shell
+
+http://10.250.140.14:9200/_analyze?pretty=true&tokenizer=standard&filter=lowercase&text=The QUICK Brown FOX!
+
+
+PUT /my_index
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "my_lowercaser": {
+          "tokenizer": "standard",
+          "filter":  [ "lowercase" ]
+        }
+      }
+    }
+  }
+}
+
+GET /my_index/_analyze?analyzer=my_lowercaser
+The QUICK Brown FOX! 
+```
+
+
+
+
+
+
+
+
+
+
 
 
 

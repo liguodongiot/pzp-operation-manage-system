@@ -268,6 +268,15 @@ public class EsTests extends BaseApplicationTest{
 
     }
 
+    @Test
+    public void testGetDocumentById2(){
+        String[] ids = {"6","6","5","3","5"};
+        for (int i = 0; i < ids.length; i++) {
+            UserInfo userInfo = EsUtils.getDocumentById(esContext.getClient(), settings.getName(), settings.getType(), ids[i], UserInfo.class);
+            System.out.println(userInfo);
+        }
+
+    }
 
 
 }

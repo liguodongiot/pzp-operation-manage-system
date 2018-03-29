@@ -1,5 +1,7 @@
 package com.pzp.manage.bean;
 
+import com.alibaba.fastjson.JSONObject;
+
 /**
  * <p>Project: pzp-operation-manage-system</p>
  * <p>Package: com.pzp.manage.bean</p>
@@ -80,5 +82,10 @@ public class UserInfo {
 
     public void setSex(String sex) {
         this.sex = sex;
+    }
+
+    @Override
+    public String toString() {
+        return JSONObject.toJSONString(this);
     }
 }

@@ -24,6 +24,7 @@ import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.IndicesAdminClient;
@@ -36,6 +37,7 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.reindex.BulkByScrollResponse;
 import org.elasticsearch.index.reindex.DeleteByQueryAction;
@@ -358,7 +360,10 @@ public final class EsUtils {
 //
 //    }
 
-    public static List<Map<String, Object>> queryDocumentByUids(TransportClient client, String name,String type, String[] ids) {
+    public static List<Map<String, Object>> queryDocumentByUids(TransportClient client,
+                                                                String name,
+                                                                String type,
+                                                                String[] ids) {
         SearchResponse response = client.prepareSearch(name).setTypes(type)
                 .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
                 .setQuery(QueryBuilders.idsQuery().types(type).addIds(ids))
@@ -386,8 +391,19 @@ public final class EsUtils {
         GetResponse response = client.prepareGet(index, type, id)
                 .execute()
                 .actionGet();
-        Map<String, Object> source = response.getSource();
-        return source;
+        return response.getSource();
+    }
+
+    public static <T> T getDocumentById(TransportClient client,
+                                        String index,
+                                        String type,
+                                        String id,
+                                        Class<T> clazz){
+        GetResponse response = client.prepareGet(index, type, id)
+                .execute()
+                .actionGet();
+        String sourceAsString = response.getSourceAsString();
+        return JSONObject.parseObject(sourceAsString, clazz);
     }
 
 
@@ -467,6 +483,49 @@ public final class EsUtils {
         LOGGER.info("searchHits:{}.", searchHits);
 
         return searchHits;
+    }
+
+    /**
+     * 滚动查询
+     */
+    public static void scrollData(EsSearchParam esSearchParam,
+                                  QueryBuilder query,
+                                  QueryBuilder postFilter,
+                                  Integer size,
+                                  TimeValue timeValue
+                                  ){
+        Date begin = new Date();
+        SearchRequestBuilder searchRequestBuilder = esSearchParam.getClient()
+                .prepareSearch(esSearchParam.getName())
+                .setSearchType(SearchType.QUERY_THEN_FETCH);
+        if(query != null){
+            searchRequestBuilder.setQuery(query);
+        }
+        if(postFilter != null){
+            searchRequestBuilder.setPostFilter(postFilter);
+        }
+        if(size != null){
+            searchRequestBuilder.setSize(size);
+        }
+        if(timeValue != null){
+            searchRequestBuilder.setScroll(timeValue);
+        }
+        SearchResponse searchResponse = searchRequestBuilder.execute().actionGet();
+
+        long count = searchResponse.getHits().getTotalHits();
+        int total = 1;
+        for(int i=0, sum=size; sum<count; i++){
+            searchResponse = esSearchParam.getClient().prepareSearchScroll(searchResponse.getScrollId())
+                    .setScroll(TimeValue.timeValueMinutes(8))
+                    .execute().actionGet();
+            sum += searchResponse.getHits().getHits().length;
+            total += 1;
+        }
+
+        Date end = new Date();
+        LOGGER.info("总耗时: "+(end.getTime()-begin.getTime()));
+        LOGGER.info("平均每次耗时："+(end.getTime()-begin.getTime())/total);
+
     }
 
 
