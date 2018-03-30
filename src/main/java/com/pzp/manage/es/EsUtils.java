@@ -488,7 +488,7 @@ public final class EsUtils {
     /**
      * 滚动查询
      */
-    public static void scrollData(EsSearchParam esSearchParam,
+    public static void pageScroll(EsSearchParam esSearchParam,
                                   QueryBuilder query,
                                   QueryBuilder postFilter,
                                   Integer size,
@@ -504,6 +504,7 @@ public final class EsUtils {
         if(postFilter != null){
             searchRequestBuilder.setPostFilter(postFilter);
         }
+
         if(size != null){
             searchRequestBuilder.setSize(size);
         }
@@ -513,8 +514,11 @@ public final class EsUtils {
         SearchResponse searchResponse = searchRequestBuilder.execute().actionGet();
 
         long count = searchResponse.getHits().getTotalHits();
+
+        int length = searchResponse.getHits().getHits().length;
+
         int total = 1;
-        for(int i=0, sum=size; sum<count; i++){
+        for(int i=0, sum=length; sum<count; i++){
             searchResponse = esSearchParam.getClient().prepareSearchScroll(searchResponse.getScrollId())
                     .setScroll(TimeValue.timeValueMinutes(8))
                     .execute().actionGet();
@@ -527,6 +531,37 @@ public final class EsUtils {
         LOGGER.info("平均每次耗时："+(end.getTime()-begin.getTime())/total);
 
     }
+
+
+    public static void pageFromSize(EsSearchParam esSearchParam,
+                                  QueryBuilder query,
+                                  QueryBuilder postFilter,
+                                  TimeValue timeValue){
+        Date begin = new Date();
+        SearchRequestBuilder searchRequestBuilder = esSearchParam.getClient()
+                .prepareSearch(esSearchParam.getName())
+                .setSearchType(SearchType.QUERY_THEN_FETCH);
+        if(query != null){
+            searchRequestBuilder.setQuery(query);
+        }
+        if(postFilter != null){
+            searchRequestBuilder.setPostFilter(postFilter);
+        }
+        if(esSearchParam.getFrom()!= null){
+            searchRequestBuilder.setFrom(esSearchParam.getFrom());
+        }
+        if(esSearchParam.getSize() != null){
+            searchRequestBuilder.setSize(esSearchParam.getSize());
+        }
+        if(timeValue != null){
+            searchRequestBuilder.setTimeout(timeValue);
+        }
+        SearchResponse searchResponse = searchRequestBuilder.execute().actionGet();
+        int length = searchResponse.getHits().getHits().length;
+        LOGGER.info("length: {} .", length);
+
+    }
+
 
 
 }

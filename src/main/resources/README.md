@@ -2135,7 +2135,6 @@ curl -XGET 'localhost:9200/my_store/products/_search?pretty' -H 'Content-Type: a
    }
 }
 '
-
 ```
 
 
@@ -2985,7 +2984,6 @@ curl -XGET 'localhost:9200/my_index/my_type/_search?pretty' -H 'Content-Type: ap
     }
 }
 '
-
 ```
 
 
@@ -4393,6 +4391,144 @@ PUT /my_index
 
 GET /my_index/_analyze?analyzer=my_lowercaser
 The QUICK Brown FOX! 
+
+
+
+
+```
+
+
+
+
+
+#### [如果有口音](https://www.elastic.co/guide/cn/elasticsearch/guide/current/asciifolding-token-filter.html)
+
+```shell
+PUT /my_index
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "folding": {
+          "tokenizer": "standard",
+          "filter":  [ "lowercase", "asciifolding" ]
+        }
+      }
+    }
+  }
+}
+
+GET /my_index?analyzer=folding
+My œsophagus caused a débâcle
+
+
+
+
+PUT /my_index/_mapping/my_type
+{
+  "properties": {
+    "title": { 
+      "type":           "string",
+      "analyzer":       "standard",
+      "fields": {
+        "folded": { 
+          "type":       "string",
+          "analyzer":   "folding"
+        }
+      }
+    }
+  }
+}
+GET /my_index/_analyze?field=title 
+Esta está loca
+
+GET /my_index/_analyze?field=title.folded 
+Esta está loca
+
+
+
+PUT /my_index/my_type/1
+{ "title": "Esta loca!" }
+
+PUT /my_index/my_type/2
+{ "title": "Está loca!" }
+
+GET /my_index/_search
+{
+  "query": {
+    "multi_match": {
+      "type":     "most_fields",
+      "query":    "esta loca",
+      "fields": [ "title", "title.folded" ]
+    }
+  }
+}
+
+
+GET /my_index/_validate/query?explain
+{
+  "query": {
+    "multi_match": {
+      "type":     "most_fields",
+      "query":    "está loca",
+      "fields": [ "title", "title.folded" ]
+    }
+  }
+}
+```
+
+
+
+#### [Unicode的世界](https://www.elastic.co/guide/cn/elasticsearch/guide/current/unicode-normalization.html)
+
+```shell
+PUT /my_index
+{
+  "settings": {
+    "analysis": {
+      "filter": {
+        "nfkc_normalizer": { 
+          "type": "icu_normalizer",
+          "name": "nfkc"
+        }
+      },
+      "analyzer": {
+        "my_normalizer": {
+          "tokenizer": "icu_tokenizer",
+          "filter":  [ "nfkc_normalizer" ]
+        }
+      }
+    }
+  }
+}
+```
+
+
+
+
+
+#### [Unicode 大小写折叠](https://www.elastic.co/guide/cn/elasticsearch/guide/current/case-folding.html)
+
+```shell
+PUT /my_index
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "my_lowercaser": {
+          "tokenizer": "icu_tokenizer",
+          "filter":  [ "icu_normalizer" ] 
+        }
+      }
+    }
+  }
+}
+
+GET /_analyze?analyzer=standard 
+Weißkopfseeadler WEISSKOPFSEEADLER
+
+GET /my_index/_analyze?analyzer=my_lowercaser 
+Weißkopfseeadler WEISSKOPFSEEADLER
 ```
 
 
@@ -4400,6 +4536,117 @@ The QUICK Brown FOX!
 
 
 
+
+#### [Unicode 字符折叠](https://www.elastic.co/guide/cn/elasticsearch/guide/current/character-folding.html)
+
+```shell
+PUT /my_index
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "my_folder": {
+          "tokenizer": "icu_tokenizer",
+          "filter":  [ "icu_folding" ]
+        }
+      }
+    }
+  }
+}
+
+GET /my_index/_analyze?analyzer=my_folder
+١٢٣٤٥ 
+```
+
+
+
+#### [排序和整理](https://www.elastic.co/guide/cn/elasticsearch/guide/current/sorting-collations.html)
+
+
+
+```shell
+PUT /my_index
+{
+  "mappings": {
+    "user": {
+      "properties": {
+        "name": { 
+          "type": "string",
+          "fields": {
+            "raw": { 
+              "type":  "string",
+              "index": "not_analyzed"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+PUT /my_index/user/1
+{ "name": "Boffey" }
+
+PUT /my_index/user/2
+{ "name": "BROWN" }
+
+PUT /my_index/user/3
+{ "name": "bailey" }
+
+GET /my_index/user/_search?sort=name.raw
+
+
+
+#########################################
+PUT /my_index
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "case_insensitive_sort": {
+          "tokenizer": "keyword",    
+          "filter":  [ "lowercase" ] 
+        }
+      }
+    }
+  }
+}
+
+
+PUT /my_index/_mapping/user
+{
+  "properties": {
+    "name": {
+      "type": "string",
+      "fields": {
+        "lower_case_sort": { 
+          "type":     "string",
+          "analyzer": "case_insensitive_sort"
+        }
+      }
+    }
+  }
+}
+
+PUT /my_index/user/1
+{ "name": "Boffey" }
+
+PUT /my_index/user/2
+{ "name": "BROWN" }
+
+PUT /my_index/user/3
+{ "name": "bailey" }
+
+GET /my_index/user/_search?sort=name.lower_case_sort
+```
+
+
+
+### [将单词还原为词根](https://www.elastic.co/guide/cn/elasticsearch/guide/current/stemming.html)
+
+
+
+#### [词干提取算法](https://www.elastic.co/guide/cn/elasticsearch/guide/current/algorithmic-stemmers.html)
 
 
 
