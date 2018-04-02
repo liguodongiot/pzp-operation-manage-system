@@ -2,17 +2,26 @@ package com.pzp.manage.test;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import com.pzp.manage.bean.es.Tokens;
 import com.pzp.manage.bean.UserInfo;
+import com.pzp.manage.bean.es.Tokens;
 import com.pzp.manage.es.*;
 import com.pzp.manage.setting.UserInfoIndexSettings;
 import com.pzp.manage.util.HttpUtil;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.util.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * <p>Project: pzp-operation-manage-system</p>
@@ -177,6 +186,56 @@ public class EsTests extends BaseApplicationTest{
         LOGGER.info("total:{}", total);
         LOGGER.info("searchHitArr:{}", JSONObject.toJSON(searchHitArr));
     }
+
+
+    @Test
+    public void testSearchTemplateFile() throws IOException {
+
+        EsSearchParam esSearchParam = new EsSearchParam.ParamBuilder(esContext.getClient(),
+                settings.getName(),settings.getType())
+                .setAlias(settings.getAlias())
+                .build();
+
+        Map<String, Object> templateParams = new HashMap<>();
+        templateParams.put("param_name", "刘飞");
+
+        LOGGER.info("-------------------");
+        LOGGER.info(this.getClass().getResource("/").getPath());
+        LOGGER.info(this.getClass().getResource("").getPath());
+        File directory = new File("");// 参数为空
+        String courseFile = directory.getCanonicalPath();
+        LOGGER.info(courseFile);
+        URL xmlpath = this.getClass().getClassLoader().getResource("");
+        LOGGER.info(xmlpath.toString());
+        LOGGER.info(System.getProperty("user.dir"));
+        LOGGER.info(System.getProperty("java.class.path"));
+        LOGGER.info("-------------------");
+
+
+        //"src/main/resources/"
+        File file = new File(this.getClass().getResource("/").getPath(),"/config/scripts/template_gender.json");
+        LOGGER.info("File: {}",file.getAbsolutePath());
+
+        //jar包中的文件只能通过InputStream读取，不能通过File
+        InputStream inputStream = this.getClass().getResourceAsStream("/config/scripts/template_gender.json");
+
+        String templateGender;
+        try {
+            //templateGender = FileUtils.readFileToString(file, "UTF-8");
+
+            templateGender = IOUtils.toString(inputStream,"UTF-8");
+        } catch (IOException e) {
+            LOGGER.error("IO error. ",e);
+            return;
+        }
+        SearchHits searchHits = EsUtils.searchTemplate(esSearchParam, templateParams, templateGender);
+        long total = searchHits.getTotalHits();
+        SearchHit[]  searchHitArr = searchHits.getHits();
+        LOGGER.info("total:{}", total);
+        LOGGER.info("searchHitArr:{}", JSONObject.toJSON(searchHitArr));
+    }
+
+
 
     ////////////////////////////////
     @Test

@@ -33,6 +33,17 @@ public class DataTypeConvertUtil {
         return map.get(key)==null ? null : obj2Int(map.get(key));
     }
 
+    public static Long str2Long(String value){
+        return Long.parseLong(value);
+    }
+
+    public static Long obj2Long(Object value){
+        return str2Long(value.toString());
+    }
+    public static Long mapValue2Long(Map<String,Object> map,String key){
+        return map.get(key)==null ? null : obj2Long(map.get(key));
+    }
+
     public static Float str2Float(String value){
         return Float.parseFloat(value);
     }
