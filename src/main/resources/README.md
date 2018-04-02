@@ -4650,6 +4650,100 @@ GET /my_index/user/_search?sort=name.lower_case_sort
 
 
 
+```shell
+{
+  "settings": {
+    "analysis": {
+      "filter": {
+        "english_stop": {
+          "type":       "stop",
+          "stopwords":  "_english_"
+        },
+        "english_keywords": {
+          "type":       "keyword_marker", 
+          "keywords":   []
+        },
+        "english_stemmer": {
+          "type":       "stemmer",
+          "language":   "english" 
+        },
+        "english_possessive_stemmer": {
+          "type":       "stemmer",
+          "language":   "possessive_english" 
+        }
+      },
+      "analyzer": {
+        "english": {
+          "tokenizer":  "standard",
+          "filter": [
+            "english_possessive_stemmer",
+            "lowercase",
+            "english_stop",
+            "english_keywords",
+            "english_stemmer"
+          ]
+        }
+      }
+    }
+  }
+}
+
+
+PUT /my_index
+{
+  "settings": {
+    "analysis": {
+      "filter": {
+        "english_stop": {
+          "type":       "stop",
+          "stopwords":  "_english_"
+        },
+        "light_english_stemmer": {
+          "type":       "stemmer",
+          "language":   "light_english" 
+        },
+        "english_possessive_stemmer": {
+          "type":       "stemmer",
+          "language":   "possessive_english"
+        }
+      },
+      "analyzer": {
+        "english": {
+          "tokenizer":  "standard",
+          "filter": [
+            "english_possessive_stemmer",
+            "lowercase",
+            "english_stop",
+            "light_english_stemmer", 
+            "asciifolding" 
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+
+
+
+
+#### [字典词干提取器](https://www.elastic.co/guide/cn/elasticsearch/guide/current/dictionary-stemmers.html)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
