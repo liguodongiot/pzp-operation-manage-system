@@ -4736,6 +4736,323 @@ PUT /my_index
 
 
 
+#### [Hunspell 词干提取器](https://www.elastic.co/guide/cn/elasticsearch/guide/current/hunspell.html)
+
+
+
+#### [选择一个词干提取器](https://www.elastic.co/guide/cn/elasticsearch/guide/current/choosing-a-stemmer.html)
+
+
+
+#### [控制词干提取](https://www.elastic.co/guide/cn/elasticsearch/guide/current/controlling-stemming.html)
+
+```SHELL
+PUT /my_index
+{
+  "settings": {
+    "analysis": {
+      "filter": {
+        "no_stem": {
+          "type": "keyword_marker",
+          "keywords": [ "skies" ] 
+        }
+      },
+      "analyzer": {
+        "my_english": {
+          "tokenizer": "standard",
+          "filter": [
+            "lowercase",
+            "no_stem",
+            "porter_stem"
+          ]
+        }
+      }
+    }
+  }
+}
+
+GET /my_index/_analyze?analyzer=my_english
+sky skies skiing skis 
+
+
+PUT /my_index
+{
+  "settings": {
+    "analysis": {
+      "filter": {
+        "custom_stem": {
+          "type": "stemmer_override",
+          "rules": [ 
+            "skies=>sky",
+            "mice=>mouse",
+            "feet=>foot"
+          ]
+        }
+      },
+      "analyzer": {
+        "my_english": {
+          "tokenizer": "standard",
+          "filter": [
+            "lowercase",
+            "custom_stem", 
+            "porter_stem"
+          ]
+        }
+      }
+    }
+  }
+}
+
+GET /my_index/_analyze?analyzer=my_english
+The mice came down from the skies and ran over my feet 
+```
+
+
+
+#### [原形词干提取](https://www.elastic.co/guide/cn/elasticsearch/guide/current/stemming-in-situ.html)
+
+```
+PUT /my_index
+{
+  "settings": {
+    "analysis": {
+      "filter": {
+        "unique_stem": {
+          "type": "unique",
+          "only_on_same_position": true 
+        }
+      },
+      "analyzer": {
+        "in_situ": {
+          "tokenizer": "standard",
+          "filter": [
+            "lowercase",
+            "keyword_repeat", 
+            "porter_stem",
+            "unique_stem" 
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+
+
+### [停用词: 性能与精度](https://www.elastic.co/guide/cn/elasticsearch/guide/current/stopwords.html)
+
+#### [停用词的优缺点](https://www.elastic.co/guide/cn/elasticsearch/guide/current/pros-cons-stopwords.html)
+
+
+
+#### [使用停用词](https://www.elastic.co/guide/cn/elasticsearch/guide/current/using-stopwords.html)
+
+```shell
+PUT /my_index
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "my_analyzer": { 
+          "type": "standard", 
+          "stopwords": [ "and", "the" ] 
+        }
+      }
+    }
+  }
+}
+
+
+GET /my_index/_analyze?analyzer=my_analyzer
+The quick and the dead
+
+# 禁用停止词
+PUT /my_index
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "my_english": {
+          "type":      "english", 
+          "stopwords": "_none_" 
+        }
+      }
+    }
+  }
+}
+
+
+PUT /my_index
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "my_english": {
+          "type":           "english",
+          "stopwords_path": "stopwords/english.txt" 
+        }
+      }
+    }
+  }
+}
+
+
+PUT /my_index
+{
+  "settings": {
+    "analysis": {
+      "filter": {
+        "spanish_stop": {
+          "type":        "stop",
+          "stopwords": [ "si", "esta", "el", "la" ]  
+        },
+        "light_spanish": { 
+          "type":     "stemmer",
+          "language": "light_spanish"
+        }
+      },
+      "analyzer": {
+        "my_spanish": {
+          "tokenizer": "spanish",
+          "filter": [ 
+            "lowercase",
+            "asciifolding",
+            "spanish_stop",
+            "light_spanish"
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+
+
+
+
+#### [停用词与性能](https://www.elastic.co/guide/cn/elasticsearch/guide/current/stopwords-performance.html)
+
+
+
+#### [词项的分别管理](https://www.elastic.co/guide/cn/elasticsearch/guide/current/common-terms.html)
+
+查询字符串中的词项可以分为更重要（低频词）和次重要（高频词）这两类
+
+
+
+```shell
+# 让所有低频词都必须匹配，而只对那些包括超过 75% 的高频词文档进行评分
+{
+  "common": {
+    "text": {
+      "query":                  "Quick and the dead",
+      "cutoff_frequency":       0.01,
+      "low_freq_operator":      "and",
+      "minimum_should_match": {
+        "high_freq":            "75%"
+      }
+    }
+  }
+}
+
+
+
+```
+
+
+
+#### [停用词与短语查询](https://www.elastic.co/guide/cn/elasticsearch/guide/current/stopwords-phrases.html)
+
+```shell
+PUT /my_index
+{
+  "mappings": {
+    "my_type": {
+      "properties": {
+        "title": { 
+          "type":          "string"
+       },
+        "content": { 
+          "type":          "string",
+          "index_options": "freqs"
+      }
+    }
+  }
+}
+```
+
+
+
+
+
+#### [common_grams 过滤器](https://www.elastic.co/guide/cn/elasticsearch/guide/current/common-grams.html)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
