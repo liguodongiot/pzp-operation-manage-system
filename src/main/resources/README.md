@@ -4989,75 +4989,575 @@ PUT /my_index
 
 #### [common_grams 过滤器](https://www.elastic.co/guide/cn/elasticsearch/guide/current/common-grams.html)
 
+```shell
+PUT /my_index
+{
+  "settings": {
+    "analysis": {
+      "filter": {
+        "index_filter": { 
+          "type":         "common_grams",
+          "common_words": "_english_" 
+        },
+        "search_filter": { 
+          "type":         "common_grams",
+          "common_words": "_english_", 
+          "query_mode":   true
+        }
+      },
+      "analyzer": {
+        "index_grams": { 
+          "tokenizer":  "standard",
+          "filter":   [ "lowercase", "index_filter" ]
+        },
+        "search_grams": { 
+          "tokenizer": "standard",
+          "filter":  [ "lowercase", "search_filter" ]
+        }
+      }
+    }
+  }
+}
+
+PUT /my_index/_mapping/my_type
+{
+  "properties": {
+    "text": {
+      "type":            "string",
+      "analyzer":  "index_grams", 
+      "search_analyzer": "standard" 
+    }
+  }
+}
 
 
+GET /my_index/_search
+{
+  "query": {
+    "match_phrase": {
+      "text": {
+        "query":    "The quick and brown fox",
+        "analyzer": "search_grams" 
+      }
+    }
+  }
+}
+
+
+GET /my_index/_search
+{
+  "query": {
+    "match_phrase": {
+      "text": {
+        "query":    "The quick",
+        "analyzer": "search_grams"
+      }
+    }
+  }
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+#### [停用词与相关性](https://www.elastic.co/guide/cn/elasticsearch/guide/current/stopwords-relavance.html)
+
+
+
+
+
+### [同义词](https://www.elastic.co/guide/cn/elasticsearch/guide/current/synonyms.html)
+
+词干提取是通过简化他们的词根形式来扩大搜索的范围，同义词 通过相关的观念和概念来扩大搜索范围。 
+
+####  [使用同义词](https://www.elastic.co/guide/cn/elasticsearch/guide/current/using-synonyms.html)
+
+```shell
+PUT /my_index
+{
+  "settings": {
+    "analysis": {
+      "filter": {
+        "my_synonym_filter": {
+          "type": "synonym", 
+          "synonyms": [ 
+            "british,english",
+            "queen,monarch"
+          ]
+        }
+      },
+      "analyzer": {
+        "my_synonyms": {
+          "tokenizer": "standard",
+          "filter": [
+            "lowercase",
+            "my_synonym_filter" 
+          ]
+        }
+      }
+    }
+  }
+}
+
+
+GET /my_index/_analyze?analyzer=my_synonyms
+Elizabeth is the English queen
+```
+
+
+
+#### [同义词格式](https://www.elastic.co/guide/cn/elasticsearch/guide/current/synonym-formats.html)
+
+
+
+#### [同义词和分析链](https://www.elastic.co/guide/cn/elasticsearch/guide/current/synonyms-analysis-chain.html)
+
+
+
+#### [多词同义词和短语查询](https://www.elastic.co/guide/cn/elasticsearch/guide/current/multi-word-synonyms.html)
+
+```shell
+PUT /my_index
+{
+  "settings": {
+    "analysis": {
+      "filter": {
+        "my_synonym_filter": {
+          "type": "synonym",
+          "synonyms": [
+            "usa,united states,u s a,united states of america"
+          ]
+        }
+      },
+      "analyzer": {
+        "my_synonyms": {
+          "tokenizer": "standard",
+          "filter": [
+            "lowercase",
+            "my_synonym_filter"
+          ]
+        }
+      }
+    }
+  }
+}
+
+GET /my_index/_analyze?analyzer=my_synonyms&text=
+The United States is wealthy
+
+
+GET /my_index/_validate/query?explain
+{
+  "query": {
+    "match_phrase": {
+      "text": {
+        "query": "usa is wealthy",
+        "analyzer": "my_synonyms"
+      }
+    }
+  }
+}
+
+
+
+# 使用简单收缩进行短语查询
+PUT /my_index
+{
+  "settings": {
+    "analysis": {
+      "filter": {
+        "my_synonym_filter": {
+          "type": "synonym",
+          "synonyms": [
+            "united states,u s a,united states of america=>usa"
+          ]
+        }
+      },
+      "analyzer": {
+        "my_synonyms": {
+          "tokenizer": "standard",
+          "filter": [
+            "lowercase",
+            "my_synonym_filter"
+          ]
+        }
+      }
+    }
+  }
+}
+
+GET /my_index/_analyze?analyzer=my_synonyms
+The United States is wealthy
+```
+
+
+
+
+
+#### [符号同义词](https://www.elastic.co/guide/cn/elasticsearch/guide/current/symbol-synonyms.html)
+
+```shell
+PUT /my_index
+{
+  "settings": {
+    "analysis": {
+      "char_filter": {
+        "emoticons": {
+          "type": "mapping",
+          "mappings": [ 
+            ":)=>emoticon_happy",
+            ":(=>emoticon_sad"
+          ]
+        }
+      },
+      "analyzer": {
+        "my_emoticons": {
+          "char_filter": "emoticons",
+          "tokenizer":   "standard",
+          "filter":    [ "lowercase" ]
+          ]
+        }
+      }
+    }
+  }
+}
 
+GET /my_index/_analyze?analyzer=my_emoticons
+I am :) not :( 
+```
 
 
 
+### [拼写错误](https://www.elastic.co/guide/cn/elasticsearch/guide/current/fuzzy-matching.html)
 
+#### [模糊性](https://www.elastic.co/guide/cn/elasticsearch/guide/current/fuzziness.html)
 
 
 
 
 
+#### [模糊查询](https://www.elastic.co/guide/cn/elasticsearch/guide/current/fuzzy-query.html)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+```
+POST /my_index/my_type/_bulk
+{ "index": { "_id": 1 }}
+{ "text": "Surprise me!"}
+{ "index": { "_id": 2 }}
+{ "text": "That was surprising."}
+{ "index": { "_id": 3 }}
+{ "text": "I wasn't surprised."}
+
+GET /my_index/my_type/_search
+{
+  "query": {
+    "fuzzy": {
+      "text": "surprize"
+    }
+  }
+}
+
+GET /my_index/my_type/_search
+{
+  "query": {
+    "fuzzy": {
+      "text": {
+        "value": "surprize",
+        "fuzziness": 1
+      }
+    }
+  }
+}
+```
+
+
+
+#### [模糊匹配查询](https://www.elastic.co/guide/cn/elasticsearch/guide/current/fuzzy-match-query.html)
+
+```
+GET /my_index/my_type/_search
+{
+  "query": {
+    "match": {
+      "text": {
+        "query":     "SURPRIZE ME!",
+        "fuzziness": "AUTO",
+        "operator":  "and"
+      }
+    }
+  }
+}
+
+
+GET /my_index/my_type/_search
+{
+  "query": {
+    "multi_match": {
+      "fields":  [ "text", "title" ],
+      "query":     "SURPRIZE ME!",
+      "fuzziness": "AUTO"
+    }
+  }
+}
+```
+
+
+
+
+
+#### [模糊性评分](https://www.elastic.co/guide/cn/elasticsearch/guide/current/fuzzy-scoring.html)
+
+
+
+## [聚合](https://www.elastic.co/guide/cn/elasticsearch/guide/current/aggregations.html)
+
+
+
+### [高阶概念](https://www.elastic.co/guide/cn/elasticsearch/guide/current/aggs-high-level.html)
+
+#### [桶](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_buckets.html)
+
+#### [指标](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_metrics.html)
+
+#### [桶和指标的组合](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_combining_the_two.html)
+
+
+
+### [尝试聚合](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_aggregation_test_drive.html)
+
+
+
+```shell
+curl -XPOST '10.250.140.14:9200/cars/transactions/_bulk?pretty' -H 'Content-Type: application/json' -d'
+{ "index": {}}
+{ "price" : 10000, "color" : "red", "make" : "honda", "sold" : "2014-10-28" }
+{ "index": {}}
+{ "price" : 20000, "color" : "red", "make" : "honda", "sold" : "2014-11-05" }
+{ "index": {}}
+{ "price" : 30000, "color" : "green", "make" : "ford", "sold" : "2014-05-18" }
+{ "index": {}}
+{ "price" : 15000, "color" : "blue", "make" : "toyota", "sold" : "2014-07-02" }
+{ "index": {}}
+{ "price" : 12000, "color" : "green", "make" : "toyota", "sold" : "2014-08-19" }
+{ "index": {}}
+{ "price" : 20000, "color" : "red", "make" : "honda", "sold" : "2014-11-05" }
+{ "index": {}}
+{ "price" : 80000, "color" : "red", "make" : "bmw", "sold" : "2014-01-01" }
+{ "index": {}}
+{ "price" : 25000, "color" : "blue", "make" : "ford", "sold" : "2014-02-12" }
+'
+
+curl -XGET '10.250.140.14:9200/cars/transactions/_search?pretty'  -d '{
+    "size" : 0,
+    "aggs" : { 
+        "popular_colors" : { 
+            "terms" : { 
+              "field" : "color.keyword"
+            }
+        }
+    }
+}'
+```
+
+​	
+
+
+
+#### [添加度量指标](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_adding_a_metric_to_the_mix.html)		
+
+```shell
+curl -XGET '10.250.140.14:9200/cars/transactions/_search?pretty'  -d '{
+   "size" : 0,
+   "aggs": {
+      "colors": {
+         "terms": {
+            "field": "color.keyword"
+         },
+         "aggs": { 
+            "avg_price": { 
+               "avg": {
+                  "field": "price" 
+               }
+            }
+         }
+      }
+   }
+}'
+```
+
+#### [嵌套桶](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_buckets_inside_buckets.html)
+
+```shell
+curl -XGET '10.250.140.14:9200/cars/transactions/_search?pretty'  -d '{
+   "size" : 0,
+   "aggs": {
+      "colors": {
+         "terms": {
+            "field": "color.keyword"
+         },
+         "aggs": {
+            "avg_price": { 
+               "avg": {
+                  "field": "price"
+               }
+            },
+            "make": { 
+                "terms": {
+                    "field": "make.keyword" 
+                }
+            }
+         }
+      }
+   }
+}'
+
+
+
+
+curl -XGET '10.250.140.14:9200/cars/transactions/_search?pretty'  -d '{
+   "size" : 0,
+   "aggs": {
+      "colors": {
+         "terms": {
+            "field": "color.keyword"
+         },
+         "aggs": {
+            "avg_price": { 
+               "avg": {
+                  "field": "price"
+               }
+            },
+            "make": { 
+                "terms": {
+                    "field": "make.keyword" 
+                },
+                "aggs": {
+                  "avg_make_price": { 
+                     "avg": {
+                        "field": "price"
+                     }
+                  },
+                  "min_price" : { "min": { "field": "price"} }, 
+                  "max_price" : { "max": { "field": "price"} } 
+              	}
+            }
+         }
+      }
+   }
+}'
+```
+
+
+
+### [条形图](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_building_bar_charts.html)
+
+```shell
+# 每个售价区间内汽车所带来的收入，
+# 可以通过对每个区间内已售汽车的售价求和得到
+curl -XGET '10.250.140.14:9200/cars/transactions/_search?pretty'  -d '
+{
+   "size" : 0,
+   "aggs":{
+      "price":{
+         "histogram":{ 
+            "field": "price",
+            "interval": 20000
+         },
+         "aggs":{
+            "revenue": {
+               "sum": { 
+                 "field" : "price"
+               }
+             }
+         }
+      }
+   }
+}'
+
+
+curl -XGET '10.250.140.14:9200/cars/transactions/_search?pretty'  -d '
+{
+  "size" : 0,
+  "aggs": {
+    "makes": {
+      "terms": {
+        "field": "make.keyword",
+        "size": 10
+      },
+      "aggs": {
+        "stats": {
+          "extended_stats": {
+            "field": "price"
+          }
+        }
+      }
+    }
+  }
+}'
+```
+
+
+
+### [按时间统计](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_looking_at_time.html)
+
+```shell
+curl -XGET '10.250.140.14:9200/cars/transactions/_search?pretty'  -d '
+{
+   "size" : 0,
+   "aggs": {
+      "sales": {
+         "date_histogram": {
+            "field": "sold",
+            "interval": "month", 
+            "format": "yyyy-MM-dd" 
+         }
+      }
+   }
+}'
+```
+
+
+
+
+
+
+
+
+
+#### [返回空 Buckets](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_returning_empty_buckets.html)
+
+```shell
+curl -XGET '10.250.140.14:9200/cars/transactions/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+   "size" : 0,
+   "aggs": {
+      "sales": {
+         "date_histogram": {
+            "field": "sold",
+            "interval": "month",
+            "format": "yyyy-MM-dd",
+            "min_doc_count" : 0, 
+            "extended_bounds" : { 
+                "min" : "2014-01-01",
+                "max" : "2015-12-31"
+            }
+         }
+      }
+   }
+}
+'
+
+```
+
+
+
+​			
 
 
 
