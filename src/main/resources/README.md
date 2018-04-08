@@ -5552,12 +5552,714 @@ curl -XGET '10.250.140.14:9200/cars/transactions/_search?pretty' -H 'Content-Typ
    }
 }
 '
+```
+
+
+
+
+
+聚合以便按季度展示所有汽车品牌总销售额。
+
+同时按季度、按每个汽车品牌计算销售总额，以便可以找出哪种品牌最赚钱
+
+```shell
+curl -XGET '10.250.140.14:9200/cars/transactions/_search?pretty' -H 'Content-Type: application/json' -d '{
+   "size" : 0,
+   "aggs": {
+      "sales": {
+         "date_histogram": {
+            "field": "sold",
+            "interval": "quarter", 
+            "format": "yyyy-MM-dd",
+            "min_doc_count" : 0,
+            "extended_bounds" : {
+                "min" : "2014-01-01",
+                "max" : "2014-12-31"
+            }
+         },
+         "aggs": {
+            "per_make_sum": {
+               "terms": {
+                  "field": "make.keyword"
+               },
+               "aggs": {
+                  "sum_price": {
+                     "sum": { "field": "price" } 
+                  }
+               }
+            },
+            "total_sum": {
+               "sum": { "field": "price" } 
+            }
+         }
+      }
+   }
+}'
+```
+
+### [范围限定的聚合](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_scoping_aggregations.html)
+
+```shell
+curl -XGET '10.250.140.14:9200/cars/transactions/_search?pretty' -H 'Content-Type: application/json' -d '{
+    "size" : 0,
+    "aggs" : {
+        "colors" : {
+            "terms" : {
+              "field" : "color"
+            }
+        }
+    }
+}'
+
+
+
+curl -XGET '10.250.140.14:9200/cars/transactions/_search?pretty' -H 'Content-Type: application/json' -d '{
+    "query" : {
+        "match" : {
+            "make" : "ford"
+        }
+    },
+    "aggs" : {
+        "colors" : {
+            "terms" : {
+              "field" : "color.keyword"
+            }
+        }
+    }
+}'
+
+
+# 全局桶
+curl -XGET '10.250.140.14:9200/cars/transactions/_search?pretty' -H 'Content-Type: application/json' -d '{
+    "size" : 0,
+    "query" : {
+        "match" : {
+            "make" : "ford"
+        }
+    },
+    "aggs" : {
+        "single_avg_price": {
+            "avg" : { "field" : "price" } 
+        },
+        "all": {
+            "global" : {}, 
+            "aggs" : {
+                "avg_price": {
+                    "avg" : { "field" : "price" } 
+                }
+
+            }
+        }
+    }
+}'
+```
+
+​			
+
+### [过滤和聚合](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_filtering_queries_and_aggregations.html)
+
+
+
+#### [过滤](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_filtering_queries.html)
+
+```shell
+curl -XGET '10.250.140.14:9200/cars/transactions/_search?pretty' -H 'Content-Type: application/json' -d '{
+    "size" : 0,
+    "query" : {
+        "constant_score": {
+            "filter": {
+                "range": {
+                    "price": {
+                        "gte": 10000
+                    }
+                }
+            }
+        }
+    },
+    "aggs" : {
+        "single_avg_price": {
+            "avg" : { "field" : "price" }
+        }
+    }
+}'
+```
+
+#### [过滤桶](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_filter_bucket.html)
+
+```shell
+curl -XGET '10.250.140.14:9200/cars/transactions/_search?pretty' -H 'Content-Type: application/json' -d '{
+   "size" : 0,
+   "query":{
+      "match": {
+         "make": "ford"
+      }
+   },
+   "aggs":{
+      "recent_sales": {
+         "filter": { 
+            "range": {
+               "sold": {
+                  "from": "now-1M"
+               }
+            }
+         },
+         "aggs": {
+            "average_price":{
+               "avg": {
+                  "field": "price" 
+               }
+            }
+         }
+      }
+   }
+}'
+```
+
+
+
+#### [post_filter](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_post_filter.html)
+
+```shell
+curl -XGET '10.250.140.14:9200/cars/transactions/_search?pretty' -H 'Content-Type: application/json' -d '{
+    "size" : 0,
+    "query": {
+        "match": {
+            "make": "ford"
+        }
+    },
+    "post_filter": {    
+        "term" : {
+            "color" : "green"
+        }
+    },
+    "aggs" : {
+        "all_colors": {
+            "terms" : { "field" : "color.keyword" }
+        }
+    }
+}'
+```
+
+#### [小结](https://github.com/elasticsearch-cn/elasticsearch-definitive-guide/edit/cn/300_Aggregations/45_filtering.asciidoc)
+
+选择合适类型的过滤（如：搜索命中、聚合或两者兼有）通常和我们期望如何表现用户交互有关。选择合适的过滤器（或组合）取决于我们期望如何将结果呈现给用户。
+
+- 在 `filter` 过滤中的 `non-scoring` 查询，同时影响搜索结果和聚合结果。
+- `filter` 桶影响聚合。
+- `post_filter` 只影响搜索结果。
+
+
+
+### [多桶排序](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_sorting_multivalue_buckets.html)
+
+
+
+#### [内置排序](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_intrinsic_sorts.html)
+
+```shell
+curl -XGET '10.250.140.14:9200/cars/transactions/_search?pretty' -H 'Content-Type: application/json' -d '{
+    "size" : 0,
+    "aggs" : {
+        "colors" : {
+            "terms" : {
+              "field" : "color.keyword",
+              "order": {
+                "_count" : "asc" 
+              }
+            }
+        }
+    }
+}'
+```
+
+
+
+#### [按度量排序](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_sorting_by_a_metric.html)
+
+```shell
+curl -XGET '10.250.140.14:9200/cars/transactions/_search?pretty' -H 'Content-Type: application/json' -d '{
+    "size" : 0,
+    "aggs" : {
+        "colors" : {
+            "terms" : {
+              "field" : "color.keyword",
+              "order": {
+                "avg_price" : "asc" 
+              }
+            },
+            "aggs": {
+                "avg_price": {
+                    "avg": {"field": "price"} 
+                }
+            }
+        }
+    }
+}'
+
+
+
+curl -XGET '10.250.140.14:9200/cars/transactions/_search?pretty' -H 'Content-Type: application/json' -d '{
+    "size" : 0,
+    "aggs" : {
+        "colors" : {
+            "terms" : {
+              "field" : "color.keyword",
+              "order": {
+                "stats.variance" : "asc" 
+              }
+            },
+            "aggs": {
+                "stats": {
+                    "extended_stats": {"field": "price"}
+                }
+            }
+        }
+    }
+}'
 
 ```
 
 
 
-​			
+
+
+
+
+
+
+#### [基于“深度”度量排序](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_sorting_based_on_deep_metrics.html)
+
+```shell
+curl -XGET '10.250.140.14:9200/cars/transactions/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+    "size" : 0,
+    "aggs" : {
+        "colors" : {
+            "histogram" : {
+              "field" : "price",
+              "interval": 20000,
+              "order": {
+                "red_green_cars>stats.variance" : "asc" 
+              }
+            },
+            "aggs": {
+                "red_green_cars": {
+                    "filter": { "terms": {"color": ["red", "green"]}}, 
+                    "aggs": {
+                        "stats": {"extended_stats": {"field" : "price"}} 
+                    }
+                }
+            }
+        }
+    }
+}
+'
+
+
+
+curl -XGET '10.250.140.14:9200/cars/transactions/_search?pretty' -H 'Content-Type: application/json' -d'
+{
+    "size" : 0,
+    "aggs" : {
+        "colors" : {
+            "histogram" : {
+              "field" : "price",
+              "interval": 20000
+            },
+            "aggs": {
+                "red_green_cars": {
+                    "filter": { "terms": {"color": ["red", "green"]}}, 
+                    "aggs": {
+                        "stats": {"extended_stats": {"field" : "price"}} 
+                    }
+                }
+            }
+        }
+    }
+}
+'
+```
+
+
+
+### [近似聚合](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_approximate_aggregations.html)
+
+#### [统计去重后的数量](https://www.elastic.co/guide/cn/elasticsearch/guide/current/cardinality.html)
+
+```shell
+curl -XGET '10.250.140.14:9200/cars/transactions/_search?pretty' -H 'Content-Type: application/json' -d '{
+    "size" : 0,
+    "aggs" : {
+        "distinct_colors" : {
+            "cardinality" : {
+              "field" : "color.keyword"
+            }
+        }
+    }
+}'
+
+
+curl -XGET '10.250.140.14:9200/cars/transactions/_search?pretty' -H 'Content-Type: application/json' -d '{
+  "size" : 0,
+  "aggs" : {
+      "months" : {
+        "date_histogram": {
+          "field": "sold",
+          "interval": "month"
+        },
+        "aggs": {
+          "distinct_colors" : {
+              "cardinality" : {
+                "field" : "color.keyword"
+              }
+          }
+        }
+      }
+  }
+}'
+
+# precision_threshold   适用于高基数和长字符串
+
+curl -XGET '10.250.140.14:9200/cars/transactions/_search?pretty' -H 'Content-Type: application/json' -d '{
+    "size" : 0,
+    "aggs" : {
+        "distinct_colors" : {
+            "cardinality" : {
+              "field" : "color.keyword",
+              "precision_threshold" : 100 
+            }
+        }
+    }
+}'
+
+# Mapper Murmur3 Pluginedit
+# https://www.elastic.co/guide/en/elasticsearch/plugins/current/mapper-murmur3.html
+# https://artifacts.elastic.co/downloads/elasticsearch-plugins/mapper-murmur3/mapper-murmur3-6.2.3.zip.
+curl -XDELETE '10.250.140.14:9200/cars?pretty'
+
+curl -XPUT '10.250.140.14:9200/cars?pretty' -d '{
+  "mappings": {
+    "transactions": {
+      "properties": {
+        "color": {
+          "type": "string",
+          "fields": {
+            "hash": {
+              "type": "murmur3" 
+            }
+          }
+        }
+      }
+    }
+  }
+}'
+
+
+curl -XPUT '10.250.140.14:9200/cars/transactions/_bulk' -d '
+{ "index": {}}
+{ "price" : 10000, "color" : "red", "make" : "honda", "sold" : "2014-10-28" }
+{ "index": {}}
+{ "price" : 20000, "color" : "red", "make" : "honda", "sold" : "2014-11-05" }
+{ "index": {}}
+{ "price" : 30000, "color" : "green", "make" : "ford", "sold" : "2014-05-18" }
+{ "index": {}}
+{ "price" : 15000, "color" : "blue", "make" : "toyota", "sold" : "2014-07-02" }
+{ "index": {}}
+{ "price" : 12000, "color" : "green", "make" : "toyota", "sold" : "2014-08-19" }
+{ "index": {}}
+{ "price" : 20000, "color" : "red", "make" : "honda", "sold" : "2014-11-05" }
+{ "index": {}}
+{ "price" : 80000, "color" : "red", "make" : "bmw", "sold" : "2014-01-01" }
+{ "index": {}}
+{ "price" : 25000, "color" : "blue", "make" : "ford", "sold" : "2014-02-12" }'
+
+curl -XGET '10.250.140.14:9200/cars/transactions/_search?pretty' -d '{
+    "size" : 0,
+    "aggs" : {
+        "distinct_colors" : {
+            "cardinality" : {
+              "field" : "color.hash" 
+            }
+        }
+    }
+}'
+```
+
+
+
+
+
+
+
+#### [百分位计算](https://www.elastic.co/guide/cn/elasticsearch/guide/current/percentiles.html)
+
+```shell
+curl -XPUT '10.250.140.14:9200/website/logs/_bulk?pretty' -d '
+{ "index": {}}
+{ "latency" : 100, "zone" : "US", "timestamp" : "2014-10-28" }
+{ "index": {}}
+{ "latency" : 80, "zone" : "US", "timestamp" : "2014-10-29" }
+{ "index": {}}
+{ "latency" : 99, "zone" : "US", "timestamp" : "2014-10-29" }
+{ "index": {}}
+{ "latency" : 102, "zone" : "US", "timestamp" : "2014-10-28" }
+{ "index": {}}
+{ "latency" : 75, "zone" : "US", "timestamp" : "2014-10-28" }
+{ "index": {}}
+{ "latency" : 82, "zone" : "US", "timestamp" : "2014-10-29" }
+{ "index": {}}
+{ "latency" : 100, "zone" : "EU", "timestamp" : "2014-10-28" }
+{ "index": {}}
+{ "latency" : 280, "zone" : "EU", "timestamp" : "2014-10-29" }
+{ "index": {}}
+{ "latency" : 155, "zone" : "EU", "timestamp" : "2014-10-29" }
+{ "index": {}}
+{ "latency" : 623, "zone" : "EU", "timestamp" : "2014-10-28" }
+{ "index": {}}
+{ "latency" : 380, "zone" : "EU", "timestamp" : "2014-10-28" }
+{ "index": {}}
+{ "latency" : 319, "zone" : "EU", "timestamp" : "2014-10-29" }'
+
+
+curl -XGET '10.250.140.14:9200/website/logs/_search?pretty' -d '{
+    "size" : 0,
+    "aggs" : {
+        "load_times" : {
+            "percentiles" : {
+                "field" : "latency" 
+            }
+        },
+        "avg_load_time" : {
+            "avg" : {
+                "field" : "latency" 
+            }
+        }
+    }
+}'
+
+# 延时的分布很广，看看它们是否与数据中心的地理区域有关
+
+curl -XGET '10.250.140.14:9200/website/logs/_search?pretty' -d '{
+    "size" : 0,
+    "aggs" : {
+        "zones" : {
+            "terms" : {
+                "field" : "zone.keyword" 
+            },
+            "aggs" : {
+                "load_times" : {
+                    "percentiles" : { 
+                      "field" : "latency",
+                      "percents" : [50, 95.0, 99.0] 
+                    }
+                },
+                "load_avg" : {
+                    "avg" : {
+                        "field" : "latency"
+                    }
+                }
+            }
+        }
+    }
+}'
+
+
+
+# 百分位等级
+
+curl -XGET '10.250.140.14:9200/website/logs/_search?pretty' -d '{
+    "size" : 0,
+    "aggs" : {
+        "zones" : {
+            "terms" : {
+                "field" : "zone.keyword"
+            },
+            "aggs" : {
+                "load_times" : {
+                    "percentile_ranks" : {
+                      "field" : "latency",
+                      "values" : [210, 800] 
+                    }
+                }
+            }
+        }
+    }
+}'
+```
+
+
+
+### [通过聚合发现异常指标](https://www.elastic.co/guide/cn/elasticsearch/guide/current/significant-terms.html)
+
+
+
+
+
+### [Doc Values and Fielddata](https://www.elastic.co/guide/cn/elasticsearch/guide/current/docvalues-and-fielddata.html)
+
+
+
+#### [Doc Values](https://www.elastic.co/guide/cn/elasticsearch/guide/current/docvalues.html)
+
+```shell
+curl -XGET '10.250.140.14:9200/my_index/_search?pretty' -d '{
+  "query" : {
+    "match" : {
+      "body" : "brown"
+    }
+  },
+  "aggs" : {
+    "popular_terms": {
+      "terms" : {
+        "field" : "body"
+      }
+    }
+  }
+}'
+```
+
+
+
+
+
+#### [聚合与分析](https://www.elastic.co/guide/cn/elasticsearch/guide/current/aggregations-and-analysis.html)
+
+
+
+```shell
+
+curl -XPOST '10.250.140.14:9200/agg_analysis/data/_bulk?pretty' -d '{ "index": {}}
+{ "state" : "New York" }
+{ "index": {}}
+{ "state" : "New Jersey" }
+{ "index": {}}
+{ "state" : "New Mexico" }
+{ "index": {}}
+{ "state" : "New York" }
+{ "index": {}}
+{ "state" : "New York" }'
+
+
+curl -XGET '10.250.140.14:9200/agg_analysis/data/_search?pretty' -d '
+{
+    "size" : 0,
+    "aggs" : {
+        "states" : {
+            "terms" : {
+                "field" : "state.keyword"
+            }
+        }
+    }
+}'
+```
+
+
+
+#### [限制内存使用](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_limiting_memory_usage.html)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
