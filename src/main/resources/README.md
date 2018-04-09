@@ -6159,17 +6159,19 @@ curl -XGET '10.250.140.14:9200/agg_analysis/data/_search?pretty' -d '
 
 
 
+#### [预加载 fielddata](https://www.elastic.co/guide/cn/elasticsearch/guide/current/preload-fielddata.html)
 
 
 
+#### [优化聚合查询](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_preventing_combinatorial_explosions.html)
 
 
 
+### [总结](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_closing_thoughts.html)
 
 
 
-
-
+## [地理位置](https://www.elastic.co/guide/cn/elasticsearch/guide/current/geoloc.html)
 
 
 
