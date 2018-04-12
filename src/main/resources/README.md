@@ -1459,7 +1459,6 @@ curl -XGET '10.250.140.14:9200/_search?pretty' -H 'Content-Type: application/jso
     }
 }
 
-
 ```
 
 
@@ -6168,104 +6167,6 @@ curl -XGET '10.250.140.14:9200/agg_analysis/data/_search?pretty' -d '
 
 
 ### [总结](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_closing_thoughts.html)
-
-
-
-## [地理位置](https://www.elastic.co/guide/cn/elasticsearch/guide/current/geoloc.html)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

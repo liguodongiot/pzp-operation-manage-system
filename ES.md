@@ -129,7 +129,6 @@ curl -XPUT 'http://10.250.140.14:9200/user_info_v1/user_info/13?pretty' -d '{"id
 
 # 删除数据
 curl -XDELETE 'http://10.250.140.14:9200/user_info_v1/user_info/13?pretty'
-
 ```
 
 
@@ -1378,6 +1377,116 @@ curl -XGET 'http://10.250.140.14:9200/_nodes/node-1/stats?pretty'
 #### 超时timeout
 
 查询时如果数据量很大，可以指定超时时间即到达此时间后无论查询的结果是什么都会返回并且关闭连接，这样用户体验较好缺点是查询出的数据可能不完整，Java和curl都可以指定超时时间。
+
+
+
+### 插件安装
+
+```shell
+后台启动ES：
+bin/elasticsearch  -d 
+bin/elasticsearch  -d  -p /home/hadoop/data/es/pid
+
+
+后台启动Kibana：
+nohup bin/kibana &
+bin/kibana -l /home/lgd/install/kibana-5.5.2-linux-x86_64/kibana.log & 
+
+
+
+Elasticsearch的默认账户为elastic,默认密码为changme
+
+curl -XPUT -u elastic 'http://localhost:9200/_xpack/security/user/elastic/_password' -d '{
+  "password" : "yourpasswd"
+}'
+
+curl -XPUT -u elastic 'http://localhost:9200/_xpack/security/user/kibana/_password' -d '{
+  "password" : "yourpasswd"
+}'
+```
+
+
+
+#### IK
+
+
+
+####murmur3
+
+
+
+#### marvel
+
+```shell
+bin/elasticsearch-plugin install x-pack
+
+# vim config/elasticsearch.yml
+action.auto_create_index: .security,.monitoring*,.watches,.triggered_watches,.watcher-history*
+
+bin/elasticsearch
+
+
+
+bin/kibana-plugin install x-pack
+
+bin/kibana
+
+用户名和密码：elastic/changeme
+
+es: http://localhost:9200/
+kibana: http://localhost:5601/
+```
+
+
+
+#### x-pack
+
+Marvel插件：在簇中从每个节点汇集数据。这个插件必须每个节点都得安装。 Marvel是Elasticsearch的管理和监控工具，在开发环境下免费使用。它包含了Sense。
+Sense：交互式控制台，使用户方便的通过浏览器直接与Elasticsearch进行交互。
+Head：在学习Elasticsearch的过程中，必不可少需要通过一些工具查看es的运行状态以及数据。如果都是通过rest请求，未免太过麻烦，而且也不够人性化。此时，Head插件可以实现基本信息的查看，rest请求的模拟，数据的检索等等。
+
+
+
+
+
+**启用和禁用X-Pack功能**
+
+默认情况下，所有X-Pack功能都已启用。 可以在elasticsearch.yml，kibana.yml和logstash.yml配置文件中启用或禁用特定的X-Pack功能
+
+```shell
+#设置                  #描述
+xpack.graph.enabled    #设置为false以禁用X-Pack图形功能。
+xpack.ml.enabled       #设置为false以禁用X-Pack机器学习功能。
+xpack.monitoring.enabled  #设置为false以禁用X-Pack监视功能。
+xpack.reporting.enabled   #设置为false以禁用X-Pack报告功能。
+xpack.security.enabled    #设置为false以禁用X-Pack安全功能。
+xpack.watcher.enabled    #设置为false以禁用Watcher。
+```
+
+
+
+**内置角色**
+
+
+```shell
+ingest_admin  #授予访问权限以管理所有索引模板和所有摄取管道配置。这个角色不能提供创建索引的能力; 这些特权必须在一个单独的角色中定义。
+kibana_dashboard_only_user  #授予对Kibana仪表板的访问权限以及对.kibana索引的只读权限。 这个角色无法访问Kibana中的编辑工具。
+kibana_system  #授予Kibana系统用户读取和写入Kibana索引所需的访问权限，管理索引模板并检查Elasticsearch集群的可用性。 此角色授予对.monitoring- *索引的读取访问权限以及对.reporting- *索引的读取和写入访问权限。
+kibana_user   #授予Kibana用户所需的最低权限。 此角色授予访问集群的Kibana索引和授予监视权限。
+logstash_admin  #授予访问用于管理配置的.logstash *索引的权限。
+logstash_system  #授予Logstash系统用户所需的访问权限，以将系统级别的数据（如监视）发送给Elasticsearch。不应将此角色分配给用户，因为授予的权限可能会在不同版本之间发生变化。此角色不提供对logstash索引的访问权限，不适合在Logstash管道中使用。
+machine_learning_admin  #授予manage_ml群集权限并读取.ml- *索引的访问权限。
+machine_learning_user   #授予查看X-Pack机器学习配置，状态和结果所需的最低权限。此角色授予monitor_ml集群特权，并可以读取.ml-notifications和.ml-anomalies *索引，以存储机器学习结果。
+monitoring_user  #授予除使用Kibana所需的X-Pack监视用户以外的任何用户所需的最低权限。 这个角色允许访问监控指标。 监控用户也应该分配kibana_user角色。
+remote_monitoring_agent  #授予远程监视代理程序将数据写入此群集所需的最低权限。
+reporting_user  #授予使用Kibana所需的X-Pack报告用户所需的特定权限。 这个角色允许访问报告指数。 还应该为报告用户分配kibana_user角色和一个授予他们访问将用于生成报告的数据的角色。
+superuser   #授予对群集的完全访问权限，包括所有索引和数据。 具有超级用户角色的用户还可以管理用户和角色，并模拟系统中的任何其他用户。 由于此角色的宽容性质，在将其分配给用户时要格外小心。
+transport_client  #通过Java传输客户端授予访问集群所需的权限。 Java传输客户端使用节点活性API和群集状态API（当启用嗅探时）获取有关群集中节点的信息。 如果他们使用传输客户端，请为您的用户分配此角色。
+watcher_admin  #授予对.watches索引的写入权限，读取对监视历史记录的访问权限和触发的监视索引，并允许执行所有监视器操作。
+watcher_user  #授予读取.watches索引，获取观看动作和观察者统计信息的权限。
+```
+
+
 
 
 

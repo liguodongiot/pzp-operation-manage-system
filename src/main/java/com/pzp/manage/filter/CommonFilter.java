@@ -2,11 +2,15 @@ package com.pzp.manage.filter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
+
 
 import javax.servlet.*;
 import javax.servlet.annotation.WebFilter;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.util.Properties;
 
 
 /**
@@ -24,9 +28,17 @@ public class CommonFilter implements Filter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CommonFilter.class);
 
+    @Autowired
+    private Environment environment;
+
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
-
+        String[] activeProfiles = environment.getActiveProfiles();
+        String[] defaultProfiles = environment.getDefaultProfiles();
+        String property = environment.getProperty("spring.profiles.active");
+        //-Dspring.profiles.active=company
+        String profiles = System.getProperty("spring.profiles.active");
+        LOGGER.info("");
     }
 
     @Override
@@ -38,6 +50,5 @@ public class CommonFilter implements Filter {
 
     @Override
     public void destroy() {
-
     }
 }
