@@ -1,0 +1,3 @@
+当一个Controller中有方法加了@ExceptionHandler之后，
+这个Controller其他方法中没有捕获的异常
+就会以参数的形式传入加了@ExceptionHandler注解的那个方法中。

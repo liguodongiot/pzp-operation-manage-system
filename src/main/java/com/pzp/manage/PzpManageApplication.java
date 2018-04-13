@@ -18,7 +18,9 @@ import org.springframework.context.annotation.Configuration;
  * @date 2018/1/15 13:45 星期一
  */
 @SpringBootApplication
-@ComponentScan(basePackages = {"com.pzp.manage.controller","com.pzp.manage.service","com.pzp.manage.setting","com.pzp.manage.es"})
+@ComponentScan(basePackages = {"com.pzp.manage.controller","com.pzp.manage.service",
+        "com.pzp.manage.setting",
+        "com.pzp.manage.es","com.pzp.manage.exception"})
 @MapperScan(basePackages = {"com.pzp.manage.dao"})
 @Configuration
 //@ServletComponentScan("com.pzp.manage")
