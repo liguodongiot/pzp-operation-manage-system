@@ -522,6 +522,141 @@ curl -XGET "http://10.250.140.14:9200/_nodes/stats"
 
 
 
+#### [集群统计](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_cluster_stats.html)
+
+```shell
+curl -XGET "http://10.250.140.14:9200/_cluster/stats"
+```
+
+
+
+#### [索引统计](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_index_stats.html)
+
+```shell
+# 统计 my_index 索引
+curl -XGET "http://10.250.140.14:9200/my_index/_stats"
+
+# 使用逗号分隔索引名可以请求多个索引统计值。
+curl -XGET "http://10.250.140.14:9200/my_index,my_index_v2/_stats"
+
+# 使用特定的 _all 可以请求全部索引的统计值
+curl -XGET "http://10.250.140.14:9200/_all/_stats"
+```
+
+
+
+
+
+#### [等待中的任务](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_pending_tasks.html)
+
+```shell
+curl -XGET "http://10.250.140.14:9200/_cluster/pending_tasks"
+```
+
+
+
+#### [cat API](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_cat_api.html)
+
+```shell
+curl -XGET "http://10.250.140.14:9200/_cat"
+
+# 健康检查 
+curl -XGET "http://10.250.140.14:9200/_cat/health"
+
+# 启动表头
+curl -XGET "http://10.250.140.14:9200/_cat/health?v"
+
+# 节点统计
+curl -XGET "http://10.250.140.14:9200/_cat/nodes?v"
+
+# 对任意 API 添加 ?help 参数来做到这点
+curl -XGET "http://10.250.140.14:9200/_cat/nodes?help"
+
+# 用 ?h 参数来明确指定显示这些指标
+curl -XGET "http://10.250.140.14:9200/_cat/nodes?v&h=ip,port,heapPercent,heapMax"
+
+# 因为 cat API 试图像 *nix 工具一样工作，你可以使用管道命令将结果传递给其他工具，
+# 比如 sort 、 grep 或者 awk 。
+curl -XGET "http://10.250.140.14:9200/_cat/indices?bytes=b"
+
+
+curl -XGET -u liguodong:liguodong "http://10.250.140.14:9200/_cat/indices?bytes=b" | sort -rnk8
+
+# 排除marvel索引
+curl -XGET -u liguodong:liguodong "http://10.250.140.14:9200/_cat/indices?bytes=b" | sort -rnk8| grep -v marvel
+```
+
+
+
+#### [硬件](https://www.elastic.co/guide/cn/elasticsearch/guide/current/hardware.html)
+
+
+
+内存
+
+64 GB 内存的机器是非常理想的， 但是32 GB 和16 GB 机器也是很常见的。少于8 GB 会适得其反（你最终需要很多很多的小机器），大于64 GB 的机器也会有问题。
+
+
+
+CPUs
+
+常见的集群使用两到八个核的机器。
+
+多个内核提供的额外并发远胜过稍微快一点点的时钟频率。
+
+
+
+硬盘
+
+ 基于 SSD 的节点，查询和索引性能都有提升。如果你负担得起，SSD 是一个好的选择。
+
+网络
+
+快速可靠的网络显然对分布式系统的性能是很重要的 。 低延时能帮助确保节点间能容易的通讯，大带宽能帮助分片移动和恢复。现代数据中心网络（1 GbE, 10 GbE）对绝大多数集群都是足够的。
+
+即使数据中心们近在咫尺，也要避免集群跨越多个数据中心。绝对要避免集群跨越大的地理距离。
+
+
+
+#### [Java 虚拟机](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_java_virtual_machine.html)
+
+
+
+
+
+#### [Transport Client 与 Node Client](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_transport_client_versus_node_client.html)
+
+#### [配置管理](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_configuration_management.html)
+
+配置管理工具（ Puppet，Chef，Ansible）
+
+
+
+#### [重要配置的修改](https://www.elastic.co/guide/cn/elasticsearch/guide/current/important-configuration-changes.html)
+
+```shell
+curl -XPUT "http://10.250.140.14:9200/_cluster/settings" -H 'Content-Type: application/json' -d'
+{
+    "persistent" : {
+        "discovery.zen.minimum_master_nodes" : 2
+    }
+}'
+
+
+gateway.recover_after_nodes: 8
+gateway.expected_nodes: 10
+gateway.recover_after_time: 5m
+Elasticsearch 会采取如下操作：
+等待集群至少存在 8 个节点
+等待 5 分钟，或者10 个节点上线后，才进行数据恢复，这取决于哪个条件先达到。
+
+注意：这些配置只能设置在 config/elasticsearch.yml 文件中或者是在命令行里（它们不能动态更新）它们只在整个集群重启的时候有实质性作用。
+
+
+你的单播列表不需要包含你的集群中的所有节点， 它只是需要足够的节点，当一个新节点联系上其中一个并且说上话就可以了。如果你使用 master 候选节点作为单播列表，你只要列出三个就可以了。 这个配置在 elasticsearch.yml 文件中：
+discovery.zen.ping.unicast.hosts: ["host1", "host2:port"]
+```
+
 
 
 
@@ -548,7 +683,7 @@ curl -XGET "http://10.250.140.14:9200/_nodes/stats"
 
 
 
-
+**Elasticsearch: 权威指南：**<https://www.elastic.co/guide/cn/elasticsearch/guide/current/index.html>
 
 
 
