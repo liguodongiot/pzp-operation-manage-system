@@ -36,6 +36,13 @@ public class UserInfoController {
         return UserInfoUtil.getUserInfo();
     }
 
+    // http://localhost:8888/userInfo/objectParam?id=32&name=dsdsa
+    @GetMapping(value = "/objectParam")
+    public UserInfo objectParam(UserInfo userInfo) {
+        return userInfo;
+    }
+
+
     /**
      * http://localhost:8080/userInfo/get?name=小明
      * @param name

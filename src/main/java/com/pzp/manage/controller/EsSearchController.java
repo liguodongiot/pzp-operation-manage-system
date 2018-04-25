@@ -46,6 +46,7 @@ public class EsSearchController {
      */
     @RequestMapping("/script")
     public String templateScript(){
+        long startTime = System.currentTimeMillis();
         EsSearchParam esSearchParam = new EsSearchParam.ParamBuilder(esContext.getClient(),
                 settings.getName(),settings.getType())
                 .setAlias(settings.getAlias())
@@ -69,6 +70,8 @@ public class EsSearchController {
         SearchHit[]  searchHitArr = searchHits.getHits();
         LOGGER.info("total:{}", total);
         LOGGER.info("searchHitArr:{}", JSONObject.toJSON(searchHitArr));
+        long endTime = System.currentTimeMillis();
+        LOGGER.info("总耗时：{}。", endTime-startTime);
         return JSONObject.toJSONString(searchHitArr);
     }
 

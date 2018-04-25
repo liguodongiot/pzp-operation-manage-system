@@ -659,6 +659,25 @@ discovery.zen.ping.unicast.hosts: ["host1", "host2:port"]
 
 
 
+#### [不要触碰这些配置！](https://www.elastic.co/guide/cn/elasticsearch/guide/current/dont-touch-these-settings.html)
+
+垃圾收集器
+
+线程池
+
+
+
+#### [堆内存:大小和交换](https://www.elastic.co/guide/cn/elasticsearch/guide/current/heap-sizing.html)
+
+```shell
+export ES_HEAP_SIZE=10g
+./bin/elasticsearch -Xmx10g -Xms10g 
+```
+
+
+
+
+
 
 
 ### [部署](https://www.elastic.co/guide/cn/elasticsearch/guide/current/deploy.html)

@@ -6,6 +6,7 @@ import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
+import org.elasticsearch.xpack.client.PreBuiltXPackTransportClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +41,8 @@ public class EsContext {
         //设置集群名称
         Settings settings = Settings.builder()
                 .put("cluster.name", esClusterSettings.getName())
+                .put("xpack.security.transport.ssl.enabled", false)
+                .put("xpack.security.user", "liguodong:liguodong")
                 .put("client.transport.sniff", true)//启动嗅探功能
                 .put("client.transport.nodes_sampler_interval", "15s")
                 .build();
@@ -48,7 +51,8 @@ public class EsContext {
             String[] hostIps = esClusterSettings.getHosts().split(",");
 
             for (String hostIp : hostIps) {
-                this.client = new PreBuiltTransportClient(settings).addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(hostIp), esClusterSettings.getPort()));
+                this.client = new PreBuiltXPackTransportClient(settings)
+                        .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(hostIp), esClusterSettings.getPort()));
                 /**
                  * 查看集群信息
                  */
