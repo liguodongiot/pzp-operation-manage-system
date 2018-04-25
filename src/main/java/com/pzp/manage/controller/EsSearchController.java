@@ -55,7 +55,7 @@ public class EsSearchController {
         Map<String, Object> templateParams = new HashMap<>();
         templateParams.put("param_name", "刘飞");
 
-        File file = new File("src/main/resources/","template_gender.mustache");
+        File file = new File("src/main/resources/config/scripts/","template_gender.json");
         LOGGER.info("File: {}",file.getAbsolutePath());
 
         String templateGender;
@@ -65,7 +65,11 @@ public class EsSearchController {
             LOGGER.error("IO error. ",e);
             return "";
         }
+
         SearchHits searchHits = EsUtils.searchTemplate(esSearchParam, templateParams, templateGender);
+        if(searchHits==null){
+            return JSONObject.toJSONString("es search error");
+        }
         long total = searchHits.getTotalHits();
         SearchHit[]  searchHitArr = searchHits.getHits();
         LOGGER.info("total:{}", total);

@@ -47,6 +47,7 @@ import org.elasticsearch.script.ScriptType;
 import org.elasticsearch.script.mustache.SearchTemplateRequestBuilder;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.transport.NodeNotConnectedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -472,18 +473,22 @@ public final class EsUtils {
         }
         searchRequest.types(esSearchParam.getType())
                 .searchType(SearchType.DFS_QUERY_THEN_FETCH);
-
-        SearchResponse searchResponse = new SearchTemplateRequestBuilder(esSearchParam.getClient())
-                .setScript(templateScript)
-                .setScriptType(ScriptType.INLINE)
-                .setScriptParams(templateParams)
-                .setRequest(searchRequest)
-                .get()
-                .getResponse();
-        SearchHits searchHits = searchResponse.getHits();
-        LOGGER.info("searchHits:{}.", searchHits);
-
-        return searchHits;
+        try {
+            SearchResponse searchResponse = new SearchTemplateRequestBuilder(esSearchParam.getClient())
+                    .setScript(templateScript)
+                    .setScriptType(ScriptType.INLINE)
+                    .setScriptParams(templateParams)
+                    .setRequest(searchRequest)
+                    .get()
+                    .getResponse();
+            SearchHits searchHits = searchResponse.getHits();
+            LOGGER.info("searchHits:{}.", searchHits);
+            return searchHits;
+        } catch (Exception e){
+            LOGGER.info(e.getMessage());
+            LOGGER.error("es cluster error",e);
+        }
+        return null;
     }
 
 

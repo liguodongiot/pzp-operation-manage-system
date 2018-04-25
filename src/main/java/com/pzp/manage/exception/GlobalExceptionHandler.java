@@ -18,7 +18,7 @@ import org.springframework.web.context.request.WebRequest;
  * @date 2018/4/13 17:38 星期五
  */
 
-@ControllerAdvice
+//@ControllerAdvice
 public class GlobalExceptionHandler{
 
     /**
