@@ -1,5 +1,7 @@
 package com.pzp.manage.es;
 
+import com.alibaba.fastjson.JSONObject;
+import com.pzp.manage.bean.es.EsClusterInfo;
 import com.pzp.manage.setting.EsClusterSettings;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.cluster.node.DiscoveryNode;
@@ -10,6 +12,7 @@ import org.elasticsearch.xpack.client.PreBuiltXPackTransportClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
@@ -33,11 +36,17 @@ public class EsContext {
     @Autowired
     private EsClusterSettings esClusterSettings;
 
+    @Value("${es.cluster.info}")
+    private String esClusterInfo;
+
     private TransportClient client;
 
     @PostConstruct
     public void  init(){
         LOGGER.info("elasticsearch is connecting...");
+        //集群信息
+        EsClusterInfo info = JSONObject.parseObject(esClusterInfo, EsClusterInfo.class);
+
         //设置集群名称
         Settings settings = Settings.builder()
                 .put("cluster.name", esClusterSettings.getName())
