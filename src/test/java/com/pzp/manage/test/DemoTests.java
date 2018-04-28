@@ -1,5 +1,6 @@
 package com.pzp.manage.test;
 
+import com.alibaba.fastjson.JSONObject;
 import com.pzp.manage.bean.UserBo;
 import com.pzp.manage.bean.UserVo;
 import org.junit.Test;
@@ -29,4 +30,13 @@ public class DemoTests {
         System.out.println(userBo.toString());
     }
 
+
+    @Test
+    public void test2(){
+        UserVo userVo = new UserVo();
+        userVo.setId(100L);
+        userVo.setName("lidd");
+        String jsonString = JSONObject.toJSONString(userVo);
+        System.out.println(jsonString);
+    }
 }

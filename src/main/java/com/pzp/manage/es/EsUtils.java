@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pzp.manage.bean.BaseIntegerEs;
 import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.admin.indices.alias.IndicesAliasesResponse;
@@ -13,20 +14,24 @@ import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
-import org.elasticsearch.action.admin.indices.mapping.get.GetFieldMappingsResponse;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.elasticsearch.action.admin.indices.refresh.RefreshResponse;
 import org.elasticsearch.action.admin.indices.settings.get.GetSettingsResponse;
 import org.elasticsearch.action.admin.indices.settings.put.UpdateSettingsResponse;
+import org.elasticsearch.action.bulk.BackoffPolicy;
+import org.elasticsearch.action.bulk.BulkProcessor;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.get.GetResponse;
+import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
+import org.elasticsearch.action.update.UpdateRequest;
+import org.elasticsearch.action.update.UpdateResponse;
 import org.elasticsearch.client.IndicesAdminClient;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.cluster.metadata.AliasMetaData;
@@ -35,19 +40,23 @@ import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.compress.CompressedXContent;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.TransportAddress;
+import org.elasticsearch.common.unit.ByteSizeUnit;
+import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.index.get.GetResult;
+import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.reindex.BulkByScrollResponse;
 import org.elasticsearch.index.reindex.DeleteByQueryAction;
 import org.elasticsearch.index.reindex.DeleteByQueryRequestBuilder;
-import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.script.ScriptType;
 import org.elasticsearch.script.mustache.SearchTemplateRequestBuilder;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
-import org.elasticsearch.transport.NodeNotConnectedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -284,6 +293,24 @@ public final class EsUtils {
 
     }
 
+    public static <T> void updateDocumentById(TransportClient client,DocumentParam<T> document){
+        UpdateRequest updateRequest = new UpdateRequest();
+        updateRequest.index(document.getIndex());
+        updateRequest.type(document.getType());
+        updateRequest.id(document.getId());
+        T source = document.getSource();
+        String jsonString = JSONObject.toJSONString(source);
+        try {
+            updateRequest.doc(jsonString, XContentType.JSON);
+            UpdateResponse updateResponse = client.update(updateRequest).get();
+            GetResult getResult = updateResponse.getGetResult();
+            LOGGER.info("更新source:{}", getResult.sourceAsString());
+        } catch (Exception e) {
+            LOGGER.error("更新文档到ES索引库出错：index:{}, id:{}...", document.getIndex(), document.getId(),e);
+        }
+    }
+
+
 
     /**
      * 批量索引
@@ -309,6 +336,7 @@ public final class EsUtils {
             } catch (JsonProcessingException e) {
                 LOGGER.error("解析JSON异常... ", e);
             }
+            // 索引，修改，删除
             bulkRequest.add(client.prepareIndex(document.getIndex(), document.getType(), document.getId())
                     .setSource(source, XContentType.JSON)
             );
@@ -337,40 +365,86 @@ public final class EsUtils {
         LOGGER.info("耗时：{}。", (end-start));
     }
 
+    /**
+     * 批处理
+     * @param client
+     * @param documentList
+     * @param <T>
+     */
+    public static <T> void bulkProcessorIndexDocument(TransportClient client, List<DocumentParam<T>>
+            documentList){
+        ObjectMapper objectMapper = new ObjectMapper();
+        long start = System.currentTimeMillis();
+        BulkProcessor bulkProcessor = BulkProcessor.builder(
+            client,
+            new BulkProcessorListener())
+            .setBulkActions(10000) // 1w次请求执行一次bulk
+            .setBulkSize(new ByteSizeValue(5, ByteSizeUnit.MB)) // 5MB的数据刷新一次bulk
+            .setFlushInterval(TimeValue.timeValueSeconds(5))  // 固定5s必须刷新一次
+            .setConcurrentRequests(1) // // 固定5s必须刷新一次
+            .setBackoffPolicy(
+                    BackoffPolicy.exponentialBackoff(TimeValue.timeValueMillis(100), 3))// // 设置退避, 100ms后执行, 最大请求3次
+            .build();
 
-//    /**
-//     * 根据UID（type#id）删除多个文档
-//     * @param client
-//     * @param name
-//     * @param type
-//     * @param id
-//     */
-//    public static void deleteDocumentByUids(TransportClient client, String name,String type, String[] id) {
-//        SearchResponse response = client.prepareSearch(name)
-//                .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
-//                .setQuery(QueryBuilders.idsQuery().types(type).addIds(id))
-//                .setFrom(0)
-//                .setSize(id.length)
-//                .execute()
-//                .actionGet();
-//
-//        SearchHits hits = response.getHits();
-//
-//        if (null != hits && hits.getTotalHits() > 0) {
-//            for (SearchHit searchHit : hits) {
-//                String indexName = searchHit.getIndex();
-//                String typeName = searchHit.getType();
-//                String docId = searchHit.getId();
-//                DeleteResponse deleteResponse = client.prepareDelete(indexName,typeName,docId).get();
-//                if(deleteResponse==null || deleteResponse.getShardInfo().getFailed() > 0){
-//                    LOGGER.error("删除ES索引数据有误，result:{}。。。", docId);
-//                }
-//            }
-//        } else {
-//            LOGGER.info("没有查询到任何内容！");
+        for (int i = 0; i < documentList.size(); i++) {
+            DocumentParam<T> documentParam = documentList.get(i);
+            String source = null;
+            try {
+                source = objectMapper.writeValueAsString(documentParam.getSource());
+            } catch (JsonProcessingException e) {
+                LOGGER.error("解析JSON异常... ", e);
+            }
+            bulkProcessor.add(new IndexRequest(documentParam.getIndex(), documentParam.getType(),
+                    documentParam.getId()).source(source, XContentType.JSON));
+        }
+        //冲洗剩余的请求
+        bulkProcessor.flush();
+        bulkProcessor.close();
+//        try {
+//            bulkProcessor.awaitClose(10, TimeUnit.MINUTES);
+//        } catch (InterruptedException e) {
+//            LOGGER.error("close error",e);
 //        }
-//
-//    }
+        // Refresh your indices
+        client.admin().indices().prepareRefresh().get();
+        long end = System.currentTimeMillis();
+        LOGGER.info("耗时：{}。", (end-start));
+    }
+
+
+    public static <T extends BaseIntegerEs> void bulkProcessorIndexDocument(TransportClient client,
+                                                                            BulkIndexDocument<T> bulkIndexDocument){
+        ObjectMapper objectMapper = new ObjectMapper();
+        long start = System.currentTimeMillis();
+        BulkProcessor bulkProcessor = BulkProcessor.builder(
+                client,
+                new BulkProcessorListener())
+                .setBulkActions(10000) // 1w次请求执行一次bulk
+                .setBulkSize(new ByteSizeValue(5, ByteSizeUnit.MB)) // 5MB的数据刷新一次bulk
+                .setFlushInterval(TimeValue.timeValueSeconds(5))  // 固定5s必须刷新一次
+                .setConcurrentRequests(1) // // 固定5s必须刷新一次
+                .setBackoffPolicy(
+                        BackoffPolicy.exponentialBackoff(TimeValue.timeValueMillis(100), 3))// // 设置退避, 100ms后执行, 最大请求3次
+                .build();
+        List<T> sourceList = bulkIndexDocument.getSource();
+        for (int i = 0; i < sourceList.size(); i++) {
+            T document = sourceList.get(i);
+            String source = null;
+            try {
+                source = objectMapper.writeValueAsString(document);
+            } catch (JsonProcessingException e) {
+                LOGGER.error("解析JSON异常... ", e);
+            }
+            bulkProcessor.add(new IndexRequest(bulkIndexDocument.getIndex(), bulkIndexDocument.getType(),
+                    String.valueOf(document.getId())).source(source, XContentType.JSON));
+        }
+        //冲洗剩余的请求
+        bulkProcessor.flush();
+        bulkProcessor.close();
+        long end = System.currentTimeMillis();
+        LOGGER.info("耗时：{}。", (end-start));
+    }
+
 
     public static List<Map<String, Object>> queryDocumentByUids(TransportClient client,
                                                                 String name,
@@ -440,17 +514,15 @@ public final class EsUtils {
      * 根据查询删除文档
      * @param client
      * @param index
-     * @param name
-     * @param text
+     * @param filter QueryBuilders.matchQuery(name, text)
      */
     public static void deleteDocumentByMatchQuery(TransportClient client,
                                              final String index,
-                                             final String name,
-                                             final Object text,
+                                             BoolQueryBuilder filter,
                                              boolean asynchronously){
-        DeleteByQueryRequestBuilder deleteByQueryRequestBuilder =  DeleteByQueryAction.INSTANCE.newRequestBuilder(client)
-                .filter(QueryBuilders.matchQuery(name, text))
-                .source(index);
+        DeleteByQueryRequestBuilder deleteByQueryRequestBuilder =  DeleteByQueryAction.INSTANCE
+                .newRequestBuilder(client)
+                .source(index).filter(filter);
         if(asynchronously){
             //异步
             deleteByQueryRequestBuilder.execute(new ActionListener<BulkByScrollResponse>() {
@@ -461,7 +533,7 @@ public final class EsUtils {
                 }
                 @Override
                 public void onFailure(Exception e) {
-                    LOGGER.error("通过查询删除文档异常： index：{},  name：{}, text：{}。", index, name, text, e);
+                    LOGGER.error("通过查询删除文档异常： index：{} 。", index, e);
                 }
             });
         } else {

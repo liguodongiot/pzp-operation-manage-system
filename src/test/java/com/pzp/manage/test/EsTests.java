@@ -3,12 +3,15 @@ package com.pzp.manage.test;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.pzp.manage.bean.UserInfo;
+import com.pzp.manage.bean.UserInfoEs;
 import com.pzp.manage.bean.es.Tokens;
 import com.pzp.manage.es.*;
 import com.pzp.manage.setting.UserInfoIndexSettings;
 import com.pzp.manage.util.HttpUtil;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.junit.Test;
@@ -147,8 +150,28 @@ public class EsTests extends BaseApplicationTest{
         documentParamList.add(document9);
         documentParamList.add(document10);
 
+        EsUtils.bulkProcessorIndexDocument(esParam.getClient(), documentParamList);
         EsUtils.bulkIndexDocument(esParam.getClient(), documentParamList);
     }
+
+
+    @Test
+    public void testUpdate(){
+        EsParam esParam = new EsParam.ParamBuilder(esContext.getClient(),
+                settings.getName(),settings.getType(),settings.getField())
+                .setAlias(settings.getAlias())
+                .setShards(3)
+                .setReplicas(1)
+                .build();
+        UserInfo userInfo = new UserInfo();
+        userInfo.setId(4);
+        userInfo.setName("国");
+        userInfo.setAge(12);
+        DocumentParam<UserInfo> document = new DocumentParam<>(esParam.getName(),esParam.getType(),
+                Integer.toString(userInfo.getId()),userInfo);
+        EsUtils.updateDocumentById(esParam.getClient(), document);
+    }
+
 
     @Test
     public void testSearchTemplate(){
@@ -305,7 +328,11 @@ public class EsTests extends BaseApplicationTest{
 
     @Test
     public void testDeleteDocumentByMatchQuery() throws InterruptedException {
-        EsUtils.deleteDocumentByMatchQuery(esContext.getClient(),settings.getAlias(),"name","张飞",true);
+        BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
+        boolQueryBuilder.must(QueryBuilders.matchQuery("sex", "male"))
+                .must(QueryBuilders.matchQuery("name", "张飞"));
+        EsUtils.deleteDocumentByMatchQuery(esContext.getClient(),settings.getAlias(),
+                boolQueryBuilder,true);
         Thread.sleep(3000);
     }
 
@@ -334,6 +361,42 @@ public class EsTests extends BaseApplicationTest{
             UserInfo userInfo = EsUtils.getDocumentById(esContext.getClient(), settings.getName(), settings.getType(), ids[i], UserInfo.class);
             System.out.println(userInfo);
         }
+
+    }
+
+
+    @Test
+    public void testBulk(){
+
+        UserInfoEs userInfo1 = new UserInfoEs(2,"李国冬","滴答滴答滴滴答",23,"male");
+        UserInfoEs userInfo2 = new UserInfoEs(3,"胡景涛","小酒窝长睫毛",43,"female");
+        UserInfoEs userInfo3 = new UserInfoEs(4,"张飞","关公面前耍大刀",24,"female");
+        UserInfoEs userInfo4 = new UserInfoEs(5,"刘飞","我到底是谁呀，我不知道",26,"female");
+        UserInfoEs userInfo5 = new UserInfoEs(6,"李元芳","东方红，红太阳，希望在天上",23,"female");
+        UserInfoEs userInfo6 = new UserInfoEs(7,"张飞","关公面前耍小刀",23,"female");
+        UserInfoEs userInfo7 = new UserInfoEs(8,"张飞","上山打老虎",25,"male");
+        UserInfoEs userInfo8 = new UserInfoEs(9,"张飞","青蜂侠爱游泳",66,"male");
+        UserInfoEs userInfo9 = new UserInfoEs(10,"李元芳","东方红，红太阳，希望在天上",33,"male");
+        UserInfoEs userInfo10 = new UserInfoEs(11,"李元芳","希望在天上,青青草原",23,"male");
+        List<UserInfoEs> userInfoList = new ArrayList<>();
+        userInfoList.add(userInfo1);
+        userInfoList.add(userInfo2);
+        userInfoList.add(userInfo3);
+        userInfoList.add(userInfo4);
+        userInfoList.add(userInfo5);
+        userInfoList.add(userInfo6);
+        userInfoList.add(userInfo7);
+        userInfoList.add(userInfo8);
+        userInfoList.add(userInfo9);
+        userInfoList.add(userInfo10);
+        EsParam esParam = new EsParam.ParamBuilder(esContext.getClient(),
+                settings.getName(),settings.getType(),settings.getField())
+                .setAlias(settings.getAlias())
+                .setShards(3)
+                .setReplicas(1)
+                .build();
+        BulkIndexDocument<UserInfoEs> bulkIndexDocument = new BulkIndexDocument<>(esParam.getName(), esParam.getType(),userInfoList);
+        EsUtils.bulkProcessorIndexDocument(esParam.getClient(), bulkIndexDocument);
 
     }
 
