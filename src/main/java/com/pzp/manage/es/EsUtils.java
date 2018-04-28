@@ -4,7 +4,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pzp.manage.bean.BaseIntegerEs;
+import com.pzp.manage.bean.BaseObjectEs;
 import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.admin.indices.alias.IndicesAliasesResponse;
@@ -43,8 +43,6 @@ import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.common.unit.ByteSizeUnit;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.get.GetResult;
 import org.elasticsearch.index.query.BoolQueryBuilder;
@@ -412,8 +410,8 @@ public final class EsUtils {
     }
 
 
-    public static <T extends BaseIntegerEs> void bulkProcessorIndexDocument(TransportClient client,
-                                                                            BulkIndexDocument<T> bulkIndexDocument){
+    public static <T extends BaseObjectEs> void bulkProcessorIndexDocument(TransportClient client,
+                                                                           BulkIndexDocument<T> bulkIndexDocument){
         ObjectMapper objectMapper = new ObjectMapper();
         long start = System.currentTimeMillis();
         BulkProcessor bulkProcessor = BulkProcessor.builder(

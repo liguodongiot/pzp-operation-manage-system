@@ -1,5 +1,8 @@
 package com.pzp.manage.bean;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+
 /**
  * <p>Project: pzp-operation-manage-system</p>
  * <p>Package: com.pzp.manage.bean</p>
@@ -10,6 +13,11 @@ package com.pzp.manage.bean;
  * @version 1.0.0
  * @date 2018/4/28 21:09 星期六
  */
-public class BaseStringEs {
-    private String id;
+@Data
+public class BaseObjectEs {
+    private Object id;
+
+    public BaseObjectEs(Object id) {
+        this.id = id;
+    }
 }

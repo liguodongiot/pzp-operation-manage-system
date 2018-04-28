@@ -1,7 +1,5 @@
 package com.pzp.manage.bean;
 
-import com.alibaba.fastjson.JSONObject;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -17,7 +15,7 @@ import java.io.Serializable;
  * @date 2018/1/15 19:24 星期一
  */
 @Data
-public class UserInfoEs extends BaseIntegerEs implements Serializable{
+public class UserInfoEs extends BaseObjectEs implements Serializable{
 
     private String name;
 

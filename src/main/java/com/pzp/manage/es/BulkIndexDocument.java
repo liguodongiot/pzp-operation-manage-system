@@ -1,6 +1,6 @@
 package com.pzp.manage.es;
 
-import com.pzp.manage.bean.BaseIntegerEs;
+import com.pzp.manage.bean.BaseObjectEs;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -18,7 +18,7 @@ import java.util.List;
  */
 @Data
 @AllArgsConstructor
-public class BulkIndexDocument<T extends BaseIntegerEs> {
+public class BulkIndexDocument<T extends BaseObjectEs> {
 
     private String index;
     private String type;
