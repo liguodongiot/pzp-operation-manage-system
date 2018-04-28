@@ -5,6 +5,7 @@ import org.junit.Test;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * <p>Project: pzp-operation-manage-system</p>
@@ -46,5 +47,13 @@ public class DataTypeConvertUtilTests {
         System.out.println(DataTypeConvertUtil.float2Str(332.43F));
         System.out.println(DataTypeConvertUtil.double2Str(324.22D));
 
+    }
+
+
+    @Test
+    public void testUUID(){
+        String uuid = UUID.randomUUID().toString();
+        System.out.println(uuid);
+        System.out.println(uuid.replace("-", "").toLowerCase());
     }
 }

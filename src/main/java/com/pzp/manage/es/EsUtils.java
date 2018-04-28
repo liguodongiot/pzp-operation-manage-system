@@ -292,15 +292,16 @@ public final class EsUtils {
      */
     public static <T> void bulkIndexDocument(TransportClient client, List<DocumentParam<T>> documentList){
         ObjectMapper objectMapper = new ObjectMapper();
-
+        long start = System.currentTimeMillis();
         if (documentList == null || documentList.isEmpty()) {
-        	return;
+            return;
         }
 
         BulkRequestBuilder bulkRequest = client.prepareBulk();
         BulkResponse bulkItemResponses = null;
 
         for (int i = 0; i < documentList.size(); i++) {
+
             DocumentParam<T> document = documentList.get(i);
             String source = null;
             try {
@@ -313,18 +314,27 @@ public final class EsUtils {
             );
             if( (i+1) % BULK_SIZE == 0){
                 bulkItemResponses = bulkRequest.execute().actionGet();
+                int numberOfActions = bulkRequest.numberOfActions();
+                LOGGER.info("numberOfActions:{}",numberOfActions);
                 if(bulkItemResponses !=null && bulkItemResponses.hasFailures()){
                     String errorInfo = bulkItemResponses.buildFailureMessage();
                     LOGGER.error("索引文档到ES索引库出错：{}...", errorInfo);
                 }
+                bulkRequest = client.prepareBulk();
             }
         }
+        if(documentList.size() % BULK_SIZE != 0){
 
-        bulkItemResponses = bulkRequest.execute().actionGet();
-        if(bulkItemResponses !=null && bulkItemResponses.hasFailures()){
-            String errorInfo = bulkItemResponses.buildFailureMessage();
-            LOGGER.error("索引文档到ES索引库出错：{}...", errorInfo);
+            bulkItemResponses = bulkRequest.execute().actionGet();
+            int numberOfActions = bulkRequest.numberOfActions();
+            LOGGER.info("numberOfActions:{}",numberOfActions);
+            if(bulkItemResponses !=null && bulkItemResponses.hasFailures()){
+                String errorInfo = bulkItemResponses.buildFailureMessage();
+                LOGGER.error("索引文档到ES索引库出错：{}...", errorInfo);
+            }
         }
+        long end = System.currentTimeMillis();
+        LOGGER.info("耗时：{}。", (end-start));
     }
 
 
