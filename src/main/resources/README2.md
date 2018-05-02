@@ -2,6 +2,18 @@
 
 
 
+## 数据建模
+
+
+
+### [关联关系处理](https://www.elastic.co/guide/cn/elasticsearch/guide/current/relations.html)
+
+#### [应用层联接](https://www.elastic.co/guide/cn/elasticsearch/guide/current/application-joins.html)
+
+
+
+#### [非规范化你的数据](https://www.elastic.co/guide/cn/elasticsearch/guide/current/denormalization.html)
+
 
 
 
@@ -588,6 +600,8 @@ curl -XGET -u liguodong:liguodong "http://10.250.140.14:9200/_cat/indices?bytes=
 
 
 
+###[部署](https://www.elastic.co/guide/cn/elasticsearch/guide/current/deploy.html)
+
 #### [硬件](https://www.elastic.co/guide/cn/elasticsearch/guide/current/hardware.html)
 
 
@@ -678,9 +692,15 @@ export ES_HEAP_SIZE=10g
 
 
 
+### [文件描述符和 MMap](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_file_descriptors_and_mmap.html)
+
+```shell
+curl -XGET "http://10.250.150.243:9292/_nodes/process"
 
 
-### [部署](https://www.elastic.co/guide/cn/elasticsearch/guide/current/deploy.html)
+```
+
+
 
 
 
@@ -695,6 +715,199 @@ export ES_HEAP_SIZE=10g
 ### [部署后](https://www.elastic.co/guide/cn/elasticsearch/guide/current/post_deploy.html)
 
 
+
+#### [动态变更设置](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_changing_settings_dynamically.html)
+
+```
+PUT /_cluster/settings
+{
+    "persistent" : {
+        "discovery.zen.minimum_master_nodes" : 2 
+    },
+    "transient" : {
+        "indices.store.throttle.max_bytes_per_sec" : "50mb" 
+    }
+}
+```
+
+
+
+#### [日志记录](https://www.elastic.co/guide/cn/elasticsearch/guide/current/logging.html)
+
+```shell
+PUT /_cluster/settings
+{
+    "transient" : {
+        "logger.discovery" : "DEBUG"
+    }
+}
+
+PUT /my_index/_settings
+{
+    "index.search.slowlog.threshold.query.warn" : "10s", 
+    "index.search.slowlog.threshold.fetch.debug": "500ms", 
+    "index.indexing.slowlog.threshold.index.info": "5s" 
+}
+
+PUT /_cluster/settings
+{
+    "transient" : {
+        "logger.index.search.slowlog" : "DEBUG", 
+        "logger.index.indexing.slowlog" : "WARN" 
+    }
+}
+```
+
+
+
+
+
+#### [索引性能技巧](https://www.elastic.co/guide/cn/elasticsearch/guide/current/indexing-performance.html)
+
+段合并
+
+```shell
+# 限流阈值
+PUT /_cluster/settings
+{
+    "persistent" : {
+        "indices.store.throttle.max_bytes_per_sec" : "100mb"
+    }
+}
+
+# 彻底关掉合并限流，等你完成了导入，记得改回 merge 重新打开限流
+PUT /_cluster/settings
+{
+    "transient" : {
+        "indices.store.throttle.type" : "none" 
+    }
+}
+```
+
+
+
+**elasticsearch.yml**
+
+```
+index.merge.scheduler.max_thread_count: 1
+```
+
+#### [推迟分片分配](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_delaying_shard_allocation.html)
+
+```shell
+PUT /_cluster/settings
+{
+    "transient" : {
+        "cluster.routing.allocation.enable" : "none"
+    }
+}
+
+
+PUT /_cluster/settings
+{
+    "transient" : {
+        "cluster.routing.allocation.enable" : "all"
+    }
+}
+```
+
+
+
+#### [滚动重启](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_rolling_restarts.html)
+
+
+
+```shell
+# 禁止分片分配
+PUT /_cluster/settings
+{
+    "transient" : {
+        "cluster.routing.allocation.enable" : "none"
+    }
+}
+
+# 重启分片分配
+PUT /_cluster/settings
+{
+    "transient" : {
+        "cluster.routing.allocation.enable" : "all"
+    }
+}
+```
+
+
+
+#### [备份你的集群](https://www.elastic.co/guide/cn/elasticsearch/guide/current/backing-up-your-cluster.html)
+
+```shell
+# 创建仓库
+PUT _snapshot/my_backup 
+{
+    "type": "fs", 
+    "settings": {
+        "location": "/mount/backups/my_backup" 
+    }
+}
+
+POST _snapshot/my_backup/ 
+{
+    "type": "fs",
+    "settings": {
+        "location": "/mount/backups/my_backup",
+        "max_snapshot_bytes_per_sec" : "50mb", 
+        "max_restore_bytes_per_sec" : "50mb"
+    }
+}
+
+# 备份所有打开的索引
+PUT _snapshot/my_backup/snapshot_1
+
+# 删除快照
+DELETE _snapshot/my_backup/snapshot_2
+
+# 监控快照进度
+GET _snapshot/my_backup/snapshot_3
+GET _snapshot/my_backup/snapshot_3/_status
+
+# 取消一个快照
+DELETE _snapshot/my_backup/snapshot_3
+```
+
+
+
+#### [从快照恢复](https://www.elastic.co/guide/cn/elasticsearch/guide/current/_restoring_from_a_snapshot.html)
+
+```shell
+POST _snapshot/my_backup/snapshot_1/_restore
+
+# 指定恢复的快照
+POST /_snapshot/my_backup/snapshot_1/_restore
+{
+    "indices": "index_1", 
+    "rename_pattern": "index_(.+)", 
+    "rename_replacement": "restored_index_$1" 
+}
+
+# 如果你更希望你的 HTTP 调用阻塞直到恢复完成，添加 wait_for_completion 标记
+POST _snapshot/my_backup/snapshot_1/_restore?wait_for_completion=true
+```
+
+
+
+
+
+
+
+```shell
+# 恢复的指定索引
+GET restored_index_3/_recovery
+
+# 查看你集群里所有索引，可能包括跟你的恢复进程无关的其他分片移动
+GET /_recovery/
+
+# 取消一个恢复
+DELETE /restored_index_3
+```
 
 
 
