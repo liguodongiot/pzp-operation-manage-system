@@ -14,6 +14,845 @@
 
 #### [非规范化你的数据](https://www.elastic.co/guide/cn/elasticsearch/guide/current/denormalization.html)
 
+对每个文档保持一定数量的冗余副本可以在需要访问时避免进行关联。
+
+
+
+#### [字段折叠](https://www.elastic.co/guide/cn/elasticsearch/guide/current/top-hits.html)
+
+```shell
+GET /my_index/blogpost/_search
+{
+  "size" : 0, 
+  "query": { 
+    "bool": {
+      "must": [
+        { "match": { "title":     "relationships" }},
+        { "match": { "user.name": "John"          }}
+      ]
+    }
+  },
+  "aggs": {
+    "users": {
+      "terms": {
+        "field":   "user.name.raw",      
+        "order": { "top_score": "desc" } 
+      },
+      "aggs": {
+        "top_score": { "max":      { "script":  "_score"           }}, 
+        "blogposts": { "top_hits": { "_source": "title", "size": 5 }}  
+      }
+    }
+  }
+}
+```
+
+
+
+#### [非规范化和并发](https://www.elastic.co/guide/cn/elasticsearch/guide/current/denormalization-concurrency.html)
+
+```shell
+grep "some text" /clinton/projects/elasticsearch/*
+
+PUT /fs/file/1
+{
+  "name":     "README.txt", 
+  "path":     "/clinton/projects/elasticsearch", 
+  "contents": "Starting a new Elasticsearch project is easy..."
+}
+
+
+grep -r "some text" /clinton
+
+PUT /fs
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "paths": { 
+          "tokenizer": "path_hierarchy"
+        }
+      }
+    }
+  }
+}
+
+
+# file 类型的映射
+PUT /fs/_mapping/file
+{
+  "properties": {
+    "name": { 
+      "type":  "string",
+      "index": "not_analyzed"
+    },
+    "path": { 
+      "type":  "string",
+      "index": "not_analyzed",
+      "fields": {
+        "tree": { 
+          "type":     "string",
+          "analyzer": "paths"
+        }
+      }
+    }
+  }
+}
+
+GET /fs/file/_search
+{
+  "query": {
+    "filtered": {
+      "query": {
+        "match": {
+          "contents": "elasticsearch"
+        }
+      },
+      "filter": {
+        "term": { 
+          "path": "/clinton/projects/elasticsearch"
+        }
+      }
+    }
+  }
+}
+
+GET /fs/file/_search
+{
+  "query": {
+    "filtered": {
+      "query": {
+        "match": {
+          "contents": "elasticsearch"
+        }
+      },
+      "filter": {
+        "term": { 
+          "path.tree": "/clinton"
+        }
+      }
+    }
+  }
+}
+
+
+
+# 重命名文件和目录
+PUT /fs/file/1?version=2 
+{
+  "name":     "README.asciidoc",
+  "path":     "/clinton/projects/elasticsearch",
+  "contents": "Starting a new Elasticsearch project is easy..."
+}
+```
+
+
+
+#### [解决并发问题](https://www.elastic.co/guide/cn/elasticsearch/guide/current/concurrency-solutions.html)
+
+全局锁
+
+```shell
+# create 全局锁文档
+PUT /fs/lock/global/_create
+{}
+
+# 删除全局锁文档来释放锁
+DELETE /fs/lock/global
+
+```
+
+
+
+文档锁
+
+```shell
+PUT /fs/lock/_bulk
+{ "create": { "_id": 1}} 
+{ "process_id": 123    } 
+{ "create": { "_id": 2}}
+{ "process_id": 123    }
+
+---
+if ( ctx._source.process_id != process_id ) { 
+  assert false;  
+}
+ctx.op = 'noop'; 
+
+---
+
+POST /fs/lock/1/_update
+{
+  "upsert": { "process_id": 123 },
+  "script": "if ( ctx._source.process_id != process_id )
+  { assert false }; ctx.op = 'noop';"
+  "params": {
+    "process_id": 123
+  }
+}
+
+
+
+POST /fs/_refresh 
+
+GET /fs/lock/_search?scroll=1m 
+{
+    "sort" : ["_doc"],
+    "query": {
+        "match" : {
+            "process_id" : 123
+        }
+    }
+}
+
+PUT /fs/lock/_bulk
+{ "delete": { "_id": 1}}
+{ "delete": { "_id": 2}}
+```
+
+
+
+树锁
+
+```shell
+POST /fs/lock/%2Fclinton/_update 
+{
+  "upsert": { 
+    "lock_type":  "shared",
+    "lock_count": 1
+  },
+  "script": "if (ctx._source.lock_type == 'exclusive')
+  { assert false }; ctx._source.lock_count++"
+}
+```
+
+
+
+### [嵌套对象](https://www.elastic.co/guide/cn/elasticsearch/guide/current/nested-objects.html)
+
+```shell
+PUT /my_index/blogpost/1
+{
+  "title": "Nest eggs",
+  "body":  "Making your money work...",
+  "tags":  [ "cash", "shares" ],
+  "comments": [ 
+    {
+      "name":    "John Smith",
+      "comment": "Great article",
+      "age":     28,
+      "stars":   4,
+      "date":    "2014-09-01"
+    },
+    {
+      "name":    "Alice White",
+      "comment": "More like this please",
+      "age":     31,
+      "stars":   5,
+      "date":    "2014-10-22"
+    }
+  ]
+}
+
+GET /_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        { "match": { "name": "Alice" }},
+        { "match": { "age":  28      }} 
+      ]
+    }
+  }
+}
+```
+
+
+
+#### [嵌套对象映射](https://www.elastic.co/guide/cn/elasticsearch/guide/current/nested-mapping.html)
+
+```shell
+PUT /my_index
+{
+  "mappings": {
+    "blogpost": {
+      "properties": {
+        "comments": {
+          "type": "nested", 
+          "properties": {
+            "name":    { "type": "string"  },
+            "comment": { "type": "string"  },
+            "age":     { "type": "short"   },
+            "stars":   { "type": "short"   },
+            "date":    { "type": "date"    }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+
+
+#### [嵌套对象查询](https://www.elastic.co/guide/cn/elasticsearch/guide/current/nested-query.html)
+
+```shell
+GET /my_index/blogpost/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "match": {
+            "title": "eggs"
+          }
+        },
+        {
+          "nested": {
+            "path": "comments",
+            "score_mode": "max", 
+            "query": {
+              "bool": {
+                "must": [
+                  {
+                    "match": {
+                      "comments.name": "john"
+                    }
+                  },
+                  {
+                    "match": {
+                      "comments.age": 28
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+
+
+#### [使用嵌套字段排序](https://www.elastic.co/guide/cn/elasticsearch/guide/current/nested-sorting.html)
+
+```shell
+PUT /my_index/blogpost/2
+{
+  "title": "Investment secrets",
+  "body":  "What they don't tell you ...",
+  "tags":  [ "shares", "equities" ],
+  "comments": [
+    {
+      "name":    "Mary Brown",
+      "comment": "Lies, lies, lies",
+      "age":     42,
+      "stars":   1,
+      "date":    "2014-10-18"
+    },
+    {
+      "name":    "John Smith",
+      "comment": "You're making it up!",
+      "age":     28,
+      "stars":   2,
+      "date":    "2014-10-16"
+    }
+  ]
+}
+
+
+GET /_search
+{
+  "query": {
+    "nested": { 
+      "path": "comments",
+      "filter": {
+        "range": {
+          "comments.date": {
+            "gte": "2014-10-01",
+            "lt":  "2014-11-01"
+          }
+        }
+      }
+    }
+  },
+  "sort": {
+    "comments.stars": { 
+      "order": "asc",   
+      "mode":  "min",   
+      "nested_path": "comments", 
+      "nested_filter": {
+        "range": {
+          "comments.date": {
+            "gte": "2014-10-01",
+            "lt":  "2014-11-01"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+
+
+
+
+#### [嵌套聚合](https://www.elastic.co/guide/cn/elasticsearch/guide/current/nested-aggregation.html)
+
+```shell
+GET /my_index/blogpost/_search
+{
+  "size" : 0,
+  "aggs": {
+    "comments": { 
+      "nested": {
+        "path": "comments"
+      },
+      "aggs": {
+        "by_month": {
+          "date_histogram": { 
+            "field":    "comments.date",
+            "interval": "month",
+            "format":   "yyyy-MM"
+          },
+          "aggs": {
+            "avg_stars": {
+              "avg": { 
+                "field": "comments.stars"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+# 逆向嵌套聚合
+# 基于评论者的年龄找出评论者感兴趣 tags 的分布。 
+# comment.age 是一个嵌套字段，但 tags 在根文档.
+GET /my_index/blogpost/_search
+{
+  "size" : 0,
+  "aggs": {
+    "comments": {
+      "nested": { 
+        "path": "comments"
+      },
+      "aggs": {
+        "age_group": {
+          "histogram": { 
+            "field":    "comments.age",
+            "interval": 10
+          },
+          "aggs": {
+            "blogposts": {
+              "reverse_nested": {}, 
+              "aggs": {
+                "tags": {
+                  "terms": { 
+                    "field": "tags"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+
+
+### [父-子关系文档](https://www.elastic.co/guide/cn/elasticsearch/guide/current/parent-child.html)
+
+#### [父-子关系文档映射](https://www.elastic.co/guide/cn/elasticsearch/guide/current/parent-child-mapping.html)
+
+```shell
+PUT /company
+{
+  "mappings": {
+    "branch": {},
+    "employee": {
+      "_parent": {
+        "type": "branch" 
+      }
+    }
+  }
+}
+```
+
+
+
+#### [构建父-子文档索引](https://www.elastic.co/guide/cn/elasticsearch/guide/current/indexing-parent-child.html)
+
+父文档 ID 有两个作用：创建了父文档和子文档之间的关系，并且保证了父文档和子文档都在同一个分片上。
+
+```shell
+
+# 父文档并不需要知道它有哪些子文档。
+POST /company/branch/_bulk
+{ "index": { "_id": "london" }}
+{ "name": "London Westminster", "city": "London", "country": "UK" }
+{ "index": { "_id": "liverpool" }}
+{ "name": "Liverpool Central", "city": "Liverpool", "country": "UK" }
+{ "index": { "_id": "paris" }}
+{ "name": "Champs Élysées", "city": "Paris", "country": "France" }
+
+# 创建子文档时，用户必须要通过 parent 参数来指定该子文档的父文档 ID
+PUT /company/employee/1?parent=london 
+{
+  "name":  "Alice Smith",
+  "dob":   "1970-10-24",
+  "hobby": "hiking"
+}
+
+# 父文档的 ID
+POST /company/employee/_bulk
+{ "index": { "_id": 2, "parent": "london" }}
+{ "name": "Mark Thomas", "dob": "1982-05-16", "hobby": "diving" }
+{ "index": { "_id": 3, "parent": "liverpool" }}
+{ "name": "Barry Smith", "dob": "1979-04-01", "hobby": "hiking" }
+{ "index": { "_id": 4, "parent": "paris" }}
+{ "name": "Adrien Grand", "dob": "1987-05-11", "hobby": "horses" }
+
+# 改变一个子文档的 parent 值要先把子文档删除，然后再重新索引这个子文档。
+```
+
+
+
+#### [通过子文档查询父文档](https://www.elastic.co/guide/cn/elasticsearch/guide/current/has-child.html)
+
+```shell
+GET /company/branch/_search
+{
+  "query": {
+    "has_child": {
+      "type": "employee",
+      "query": {
+        "range": {
+          "dob": {
+            "gte": "1980-01-01"
+          }
+        }
+      }
+    }
+  }
+}
+
+GET /company/branch/_search
+{
+  "query": {
+    "has_child": {
+      "type":       "employee",
+      "score_mode": "max",
+      "query": {
+        "match": {
+          "name": "Alice Smith"
+        }
+      }
+    }
+  }
+}
+
+# 使用这两个参数时，只有当子文档数量在指定范围内时，才会返回父文档。
+GET /company/branch/_search
+{
+  "query": {
+    "has_child": {
+      "type":         "employee",
+      "min_children": 2, 
+      "query": {
+        "match_all": {}
+      }
+    }
+  }
+}
+
+
+# has_child Filter
+has_child 查询和过滤在运行机制上类似， 区别是 has_child 过滤不支持 score_mode 参数。has_child 过滤仅用于筛选内容--如内部的一个 filtered 查询--和其他过滤行为类似：包含或者排除，但没有进行评分。
+has_child 过滤的结果没有被缓存，但是 has_child 过滤内部的过滤方法适用于通常的缓存规则。
+
+
+
+```
+
+
+
+#### [通过父文档查询子文档](https://www.elastic.co/guide/cn/elasticsearch/guide/current/has-parent.html)
+
+```shell
+curl -XGET "http://10.250.140.14:9200/company/employee/_search" -H 'Content-Type: application/json' -d'
+{
+  "query": {
+    "has_parent": {
+      "parent_type": "branch", 
+      "query": {
+        "match": {
+          "country": "UK"
+        }
+      }
+    }
+  }
+}'
+```
+
+
+
+`has_parent` 查询也支持 `score_mode` 这个参数，但是该参数只支持两种值： `none` （默认）和 `score` 。
+
+
+
+#### [子文档聚合](https://www.elastic.co/guide/cn/elasticsearch/guide/current/children-agg.html)
+
+```shell
+# 按照国家维度查看最受雇员欢迎的业余爱好
+GET /company/branch/_search
+{
+  "size" : 0,
+  "aggs": {
+    "country": {
+      "terms": { 
+        "field": "country.keyword"
+      },
+      "aggs": {
+        "employees": {
+          "children": { 
+            "type": "employee"
+          },
+          "aggs": {
+            "hobby": {
+              "terms": { 
+                "field": "hobby.keyword"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+
+
+#### [祖辈与孙辈关系](https://www.elastic.co/guide/cn/elasticsearch/guide/current/grandparents.html)
+
+```shell
+PUT /company
+{
+  "mappings": {
+    "country": {},
+    "branch": {
+      "_parent": {
+        "type": "country" 
+      }
+    },
+    "employee": {
+      "_parent": {
+        "type": "branch" 
+      }
+    }
+  }
+}
+
+
+POST /company/country/_bulk
+{ "index": { "_id": "uk" }}
+{ "name": "UK" }
+{ "index": { "_id": "france" }}
+{ "name": "France" }
+
+POST /company/branch/_bulk
+{ "index": { "_id": "london", "parent": "uk" }}
+{ "name": "London Westmintster" }
+{ "index": { "_id": "liverpool", "parent": "uk" }}
+{ "name": "Liverpool Central" }
+{ "index": { "_id": "paris", "parent": "france" }}
+{ "name": "Champs Élysées" }
+
+
+PUT /company/employee/1?parent=london
+{
+  "name":  "Alice Smith",
+  "dob":   "1970-10-24",
+  "hobby": "hiking"
+}
+
+# 添加一个额外的 routing 参数，将其设置为祖辈的文档 ID ，以此来保证三代文档路由到同一个分片上
+PUT /company/employee/1?parent=london&routing=uk 
+{
+  "name":  "Alice Smith",
+  "dob":   "1970-10-24",
+  "hobby": "hiking"
+}
+
+
+
+# 找到哪些国家的雇员喜欢远足旅行，此时只需要联合 country 和 branch，以及 branch 和 employee
+GET /company/country/_search
+{
+  "query": {
+    "has_child": {
+      "type": "branch",
+      "query": {
+        "has_child": {
+          "type": "employee",
+          "query": {
+            "match": {
+              "hobby": "hiking"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+
+
+
+```
+
+
+
+#### [实际使用中的一些建议](https://www.elastic.co/guide/cn/elasticsearch/guide/current/parent-child-performance.html)
+
+```shell
+PUT /company
+{
+  "mappings": {
+    "branch": {},
+    "employee": {
+      "_parent": {
+        "type": "branch",
+        "fielddata": {
+          "loading": "eager_global_ordinals" 
+        }
+      }
+    }
+  }
+}
+```
+
+### [扩容设计](https://www.elastic.co/guide/cn/elasticsearch/guide/current/scale.html)
+
+#### [扩容的单元](https://www.elastic.co/guide/cn/elasticsearch/guide/current/shard-scale.html)
+
+
+
+[多索引](https://www.elastic.co/guide/cn/elasticsearch/guide/current/multiple-indices.html)
+
+```shell
+PUT /tweets_1/_alias/tweets_search 
+PUT /tweets_1/_alias/tweets_index 
+
+
+POST /_aliases
+{
+  "actions": [
+    { "add":    { "index": "tweets_2", "alias": "tweets_search" }}, 
+    { "remove": { "index": "tweets_1", "alias": "tweets_index"  }}, 
+    { "add":    { "index": "tweets_2", "alias": "tweets_index"  }}  
+  ]
+}
+```
+
+
+
+#### [基于时间的数据](https://www.elastic.co/guide/cn/elasticsearch/guide/current/time-based.html)
+
+```shell
+POST /_aliases
+{
+  "actions": [
+    { "add":    { "alias": "logs_current",  "index": "logs_2014-10" }}, 
+    { "remove": { "alias": "logs_current",  "index": "logs_2014-09" }}, 
+    { "add":    { "alias": "last_3_months", "index": "logs_2014-10" }}, 
+    { "remove": { "alias": "last_3_months", "index": "logs_2014-07" }}  
+  ]
+}
+```
+
+
+
+#### [索引模板](https://www.elastic.co/guide/cn/elasticsearch/guide/current/index-templates.html)
+
+```shell
+PUT /_template/my_logs 
+{
+  "template": "logstash-*", 
+  "order":    1, 
+  "settings": {
+    "number_of_shards": 1 
+  },
+  "mappings": {
+    "_default_": { 
+      "_all": {
+        "enabled": false
+      }
+    }
+  },
+  "aliases": {
+    "last_3_months": {} 
+  }
+}
+```
+
+
+
+#### [数据过期](https://www.elastic.co/guide/cn/elasticsearch/guide/current/retiring-data.html)
+
+
+
+```shell
+# 迁移旧数据
+./bin/elasticsearch --node.box_type strong
+
+PUT /logs_2014-10-01
+{
+  "settings": {
+    "index.routing.allocation.include.box_type" : "strong"
+  }
+}
+
+
+POST /logs_2014-09-30/_settings
+{
+  "index.routing.allocation.include.box_type" : "medium"
+}
+
+# 索引优化（Optimize）
+POST /logs_2014-09-30/_settings
+{ "number_of_replicas": 0 }
+
+POST /logs_2014-09-30/_optimize?max_num_segments=1
+
+POST /logs_2014-09-30/_settings
+{ "number_of_replicas": 1 }
+
+# 没有副本我们将面临磁盘故障而导致丢失数据的风险。你可能想要先备份数据。
+
+# 关闭旧索引
+POST /logs_2014-01-*/_flush 
+POST /logs_2014-01-*/_close 
+POST /logs_2014-01-*/_open
+```
+
+
+
+
+
+
+
 
 
 
