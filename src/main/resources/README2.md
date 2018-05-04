@@ -2,6 +2,164 @@
 
 
 
+### [地理坐标点](https://www.elastic.co/guide/cn/elasticsearch/guide/current/geopoints.html)
+
+地理坐标点不能被动态映射自动检测，而是需要显式声明对应字段类型为 `geo-point`
+
+```shell
+PUT /attractions
+{
+  "mappings": {
+    "restaurant": {
+      "properties": {
+        "name": {
+          "type": "text"
+        },
+        "location": {
+          "type": "geo_point"
+        }
+      }
+    }
+  }
+}
+```
+
+
+
+#### [经纬度坐标格式](https://www.elastic.co/guide/cn/elasticsearch/guide/current/lat-lon-formats.html)
+
+```shell
+PUT /attractions/restaurant/1
+{
+  "name":     "Chipotle Mexican Grill",
+  "location": "40.715, -74.011" 
+}
+
+PUT /attractions/restaurant/2
+{
+  "name":     "Pala Pizza",
+  "location": { 
+    "lat":     40.722,
+    "lon":    -73.989
+  }
+}
+
+PUT /attractions/restaurant/3
+{
+  "name":     "Mini Munchies Pizza",
+  "location": [ -73.983, 40.719 ] 
+}
+```
+
+
+
+#### [地理坐标盒模型过滤器](https://www.elastic.co/guide/cn/elasticsearch/guide/current/geo-bounding-box.html)
+
+```shell
+
+GET /attractions/restaurant/_search
+{
+  "query": {
+    "geo_bounding_box": {
+      "location": { 
+        "top_left": {
+          "lat":  40.8,
+          "lon": -74.0
+        },
+        "bottom_right": {
+          "lat":  40.7,
+          "lon": -73.0
+        }
+      }
+    }
+  }
+}
+
+
+```
+
+
+
+#### [地理距离过滤器](https://www.elastic.co/guide/cn/elasticsearch/guide/current/geo-distance.html)
+
+```shell
+# 地理距离过滤器（ geo_distance ）以给定位置为圆心画一个圆，来找出那些地理坐标落在其中的文档
+
+GET /attractions/restaurant/_search
+{
+  "query": {
+    "geo_distance": {
+      "distance": "1km", 
+      "location": { 
+        "lat":  40.715,
+        "lon": -73.988
+      }
+    }
+  }
+}
+
+
+# 指定不同的计算方式
+GET /attractions/restaurant/_search
+{
+  "query": {
+    "geo_distance": {
+      "distance":      "1km",
+      "distance_type": "plane", 
+      "location": {
+        "lat":  40.715,
+        "lon": -73.988
+      }
+    }
+  }
+}
+
+
+```
+
+
+
+#### [按距离排序](https://www.elastic.co/guide/cn/elasticsearch/guide/current/sorting-by-distance.html)
+
+```shell
+GET /attractions/restaurant/_search
+{
+  "query": {
+    "geo_bounding_box": {
+      "type":       "indexed",
+      "location": {
+        "top_left": {
+          "lat":  40.8,
+          "lon": -74.0
+        },
+        "bottom_right": {
+          "lat":  40.4,
+          "lon": -73.0
+        }
+      }
+    }
+  },
+  "sort": [
+    {
+      "_geo_distance": {
+        "location": { 
+          "lat":  40.715,
+          "lon": -73.998
+        },
+        "order":         "asc",
+        "unit":          "km", 
+        "distance_type": "plane" 
+      }
+    }
+  ]
+}
+
+```
+
+
+
+
+
 ## 数据建模
 
 
@@ -850,6 +1008,169 @@ POST /logs_2014-01-*/_open
 
 
 
+
+#### [共享索引](https://www.elastic.co/guide/cn/elasticsearch/guide/current/shared-index.html)
+
+```shell
+PUT /forums
+{
+  "settings": {
+    "number_of_shards": 10 
+  },
+  "mappings": {
+    "post": {
+      "properties": {
+        "forum_id": { 
+          "type":  "string",
+          "index": "not_analyzed"
+        }
+      }
+    }
+  }
+}
+
+PUT /forums/post/1
+{
+  "forum_id": "baking", 
+  "title":    "Easy recipe for ginger nuts"
+}
+
+
+GET /forums/post/_search
+{
+  "query": {
+    "bool": {
+      "must": {
+        "match": {
+          "title": "ginger nuts"
+        }
+      },
+      "filter": {
+        "term": {
+          "forum_id": {
+            "baking"
+          }
+        }
+      }
+    }
+  }
+}
+
+
+PUT /forums/post/1?routing=baking 
+{
+  "forum_id": "baking", 
+  "title":    "Easy recipe for ginger nuts",
+  ...
+}
+
+GET /forums/post/_search?routing=baking 
+{
+  "query": {
+    "bool": {
+      "must": {
+        "match": {
+          "title": "ginger nuts"
+        }
+      },
+      "filter": {
+        "term": { 
+          "forum_id": {
+            "baking"
+          }
+        }
+      }
+    }
+  }
+}
+
+
+
+```
+
+
+
+#### [利用别名实现一个用户一个索引](https://www.elastic.co/guide/cn/elasticsearch/guide/current/faking-it.html)
+
+
+
+```shell
+# 一个别名与一个索引关联起来，你可以指定一个过滤器和一个路由值
+PUT /forums/_alias/baking
+{
+  "routing": "baking",
+  "filter": {
+    "term": {
+      "forum_id": "baking"
+    }
+  }
+}
+
+# 将 baking 别名视为一个单独的索引。
+# 索引至 baking 别名的文档会自动地应用我们自定义的路由值
+PUT /baking/post/1 
+{
+  "forum_id": "baking", 
+  "title":    "Easy recipe for ginger nuts",
+  ...
+}
+
+
+# 对 baking 别名上的查询只会在自定义路由值关联的分片上运行，
+# 并且结果也自动按照我们指定的过滤器进行了过滤.
+GET /baking/post/_search
+{
+  "query": {
+    "match": {
+      "title": "ginger nuts"
+    }
+  }
+}
+
+# 当对多个论坛进行搜索时可以指定多个别名
+GET /baking,recipes/post/_search 
+{
+  "query": {
+    "match": {
+      "title": "ginger nuts"
+    }
+  }
+}
+```
+
+
+
+#### [一个大的用户](https://www.elastic.co/guide/cn/elasticsearch/guide/current/one-big-user.html)
+
+```shell
+# 那个论坛创建一个新的索引，并为其分配合理的分片数，可以满足一定预期的数据增长
+PUT /baking_v1
+{
+  "settings": {
+    "number_of_shards": 3
+  }
+}
+
+# 将共享的索引中的数据迁移到专用的索引中，可以通过scroll查询和bulk API来实现。 
+# 当迁移完成时，可以更新索引别名指向那个新的索引
+POST /_aliases
+{
+  "actions": [
+    { "remove": { "alias": "baking", "index": "forums"    }},
+    { "add":    { "alias": "baking", "index": "baking_v1" }}
+  ]
+}
+
+
+```
+
+
+
+#### [扩容并不是无限的](https://www.elastic.co/guide/cn/elasticsearch/guide/current/finite-scale.html)
+
+```shell
+GET /_cluster/state
+```
 
 
 
