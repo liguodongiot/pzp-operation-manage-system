@@ -54,3 +54,7 @@ http://localhost:8888/userManage/createIndexLib?version=va&isUseAlias=true
 
 
 ```
+
+
+http响应Last-Modified和ETag
+http://www.iwms.net/n2029c12.aspx

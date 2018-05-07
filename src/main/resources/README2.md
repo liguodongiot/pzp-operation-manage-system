@@ -154,7 +154,447 @@ GET /attractions/restaurant/_search
   ]
 }
 
+
+# 根据距离打分
 ```
+
+
+
+### [Geohashes](https://www.elastic.co/guide/cn/elasticsearch/guide/current/geohashes.html)
+
+
+
+#### [Geohashes 映射](https://www.elastic.co/guide/cn/elasticsearch/guide/current/geohash-mapping.html)
+
+```shell
+PUT /attractions
+{
+  "mappings": {
+    "restaurant": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "location": {
+          "type":               "geo_point",
+          "geohash_prefix":     true, 
+          "geohash_precision":  "1km" 
+        }
+      }
+    }
+  }
+}
+```
+
+
+
+#### [Geohash 单元查询](https://www.elastic.co/guide/cn/elasticsearch/guide/current/geohash-cell-query.html)
+
+把经纬度坐标位置根据指定精度转换成一个 geohash ，然后查找所有包含这个 geohash 的位置——这是非常高效的查询。
+
+```shell
+GET /attractions/restaurant/_search
+{
+  "query": {
+    "constant_score": {
+      "filter": {
+        "geohash_cell": {
+          "location": {
+            "lat":  40.718,
+            "lon": -73.983
+          },
+          "precision": "2km" 
+        }
+      }
+    }
+  }
+}
+
+
+
+GET /attractions/restaurant/_search
+{
+  "query": {
+    "constant_score": {
+      "filter": {
+        "geohash_cell": {
+          "location": {
+            "lat":  40.718,
+            "lon": -73.983
+          },
+          "neighbors": true,  //寻找对应的 geohash 和包围它的 geohashes
+          "precision": "2km"
+        }
+      }
+    }
+  }
+}
+```
+
+### [地理位置聚合](https://www.elastic.co/guide/cn/elasticsearch/guide/current/geo-aggs.html)
+
+
+
+#### [地理距离聚合](https://www.elastic.co/guide/cn/elasticsearch/guide/current/geo-distance-agg.html)
+
+```shell
+GET /attractions/restaurant/_search
+{
+  "query": {
+    "bool": {
+      "must": {
+        "match": { 
+          "name": "pizza"
+        }
+      },
+      "filter": {
+        "geo_bounding_box": {
+          "location": { 
+            "top_left": {
+              "lat":  40.8,
+              "lon": -74.1
+            },
+            "bottom_right": {
+              "lat":  40.4,
+              "lon": -73.7
+            }
+          }
+        }
+      }
+    }
+  },
+  "aggs": {
+    "per_ring": {
+      "geo_distance": { 
+        "field":    "location",
+        "unit":     "km",
+        "origin": {
+          "lat":    40.712,
+          "lon":   -73.988
+        },
+        "ranges": [
+          { "from": 0, "to": 1 },
+          { "from": 1, "to": 2 }
+        ]
+      }
+    }
+  },
+  "post_filter": { 
+    "geo_distance": {
+      "distance":   "1km",
+      "location": {
+        "lat":      40.712,
+        "lon":     -73.988
+      }
+    }
+  }
+}
+```
+
+
+
+#### [Geohash 网格聚合](https://www.elastic.co/guide/cn/elasticsearch/guide/current/geohash-grid-agg.html)
+
+```json
+GET /attractions/restaurant/_search
+{
+  "size" : 0,
+  "query": {
+    "constant_score": {
+      "filter": {
+        "geo_bounding_box": {
+          "location": { 
+            "top_left": {
+              "lat":  40.8,
+              "lon": -74.1
+            },
+            "bottom_right": {
+              "lat":  40.4,
+              "lon": -73.7
+            }
+          }
+        }
+      }
+    }
+  },
+  "aggs": {
+    "new_york": {
+      "geohash_grid": { 
+        "field":     "location",
+        "precision": 5
+      }
+    }
+  }
+}
+```
+
+
+
+
+
+#### [地理边界聚合](https://www.elastic.co/guide/cn/elasticsearch/guide/current/geo-bounds-agg.html)
+
+```shell
+GET /attractions/restaurant/_search
+{
+  "size" : 0,
+  "query": {
+    "constant_score": {
+      "filter": {
+        "geo_bounding_box": {
+          "location": {
+            "top_left": {
+              "lat":  40,8,
+              "lon": -74.1
+            },
+            "bottom_right": {
+              "lat":  40.4,
+              "lon": -73.9
+            }
+          }
+        }
+      }
+    }
+  },
+  "aggs": {
+    "new_york": {
+      "geohash_grid": {
+        "field":     "location",
+        "precision": 5
+      }
+    },
+    "map_zoom": { 
+      "geo_bounds": {
+        "field":     "location"
+      }
+    }
+  }
+}
+
+
+GET /attractions/restaurant/_search
+{
+  "size" : 0,
+  "query": {
+    "constant_score": {
+      "filter": {
+        "geo_bounding_box": {
+          "location": {
+            "top_left": {
+              "lat":  40,8,
+              "lon": -74.1
+            },
+            "bottom_right": {
+              "lat":  40.4,
+              "lon": -73.9
+            }
+          }
+        }
+      }
+    }
+  },
+  "aggs": {
+    "new_york": {
+      "geohash_grid": {
+        "field":     "location",
+        "precision": 5
+      },
+      "aggs": {
+        "cell": { 
+          "geo_bounds": {
+            "field": "location"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+
+
+#### 
+
+
+
+
+
+
+
+### [地理形状](https://www.elastic.co/guide/cn/elasticsearch/guide/current/geo-shapes.html)
+
+geo-shapes 有以下作用：判断查询的形状与索引的形状的关系；这些 `关系` 可能是以下之一：
+
+- `intersects`
+
+  查询的形状与索引的形状有重叠（默认）。
+
+- `disjoint`
+
+  查询的形状与索引的形状完全 *不* 重叠。
+
+- `within`
+
+  索引的形状完全被包含在查询的形状中。
+
+Geo-shapes 不能用于计算距离、排序、打分以及聚合。
+
+
+
+#### [映射地理形状](https://www.elastic.co/guide/cn/elasticsearch/guide/current/mapping-geo-shapes.html)
+
+```json
+PUT /attractions
+{
+  "mappings": {
+    "landmark": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "location": {
+          "type": "geo_shape"
+        }
+      }
+    }
+  }
+}
+```
+
+修改两个非常重要的设置： `精度` 和 `距离误差` 。
+
+
+
+#### [索引地理形状](https://www.elastic.co/guide/cn/elasticsearch/guide/current/indexing-geo-shapes.html)
+
+```shell
+GET /attractions/landmark/_search
+{
+  "query": {
+    "geo_shape": {
+      "location": { 
+        "shape": { 
+          "type":   "circle", 
+          "radius": "1km",
+          "coordinates": [ 
+            4.89994,
+            52.37815
+          ]
+        }
+      }
+    }
+  }
+}
+
+
+GET /attractions/landmark/_search
+{
+  "query": {
+    "geo_shape": {
+      "location": {
+        "relation": "within", 
+        "shape": {
+          "type": "polygon",
+          "coordinates": [[ 
+              [4.88330,52.38617],
+              [4.87463,52.37254],
+              [4.87875,52.36369],
+              [4.88939,52.35850],
+              [4.89840,52.35755],
+              [4.91909,52.36217],
+              [4.92656,52.36594],
+              [4.93368,52.36615],
+              [4.93342,52.37275],
+              [4.92690,52.37632],
+              [4.88330,52.38617]
+            ]]
+        }
+      }
+    }
+  }
+}
+
+```
+
+
+
+#### [在查询中使用已索引的形状](https://www.elastic.co/guide/cn/elasticsearch/guide/current/indexed-geo-shapes.html)
+
+```json
+PUT /attractions/_mapping/neighborhood
+{
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "location": {
+      "type": "geo_shape"
+    }
+  }
+}
+
+
+PUT /attractions/neighborhood/central_amsterdam
+{
+  "name" : "Central Amsterdam",
+  "location" : {
+      "type" : "polygon",
+      "coordinates" : [[
+        [4.88330,52.38617],
+        [4.87463,52.37254],
+        [4.87875,52.36369],
+        [4.88939,52.35850],
+        [4.89840,52.35755],
+        [4.91909,52.36217],
+        [4.92656,52.36594],
+        [4.93368,52.36615],
+        [4.93342,52.37275],
+        [4.92690,52.37632],
+        [4.88330,52.38617]
+      ]]
+  }
+}
+
+
+GET /attractions/landmark/_search
+{
+  "query": {
+    "geo_shape": {
+      "location": {
+        "relation": "within",
+        "indexed_shape": { 
+          "index": "attractions",
+          "type":  "neighborhood",
+          "id":    "central_amsterdam",
+          "path":  "location"
+        }
+      }
+    }
+  }
+}
+
+
+GET /attractions/neighborhood/_search
+{
+  "query": {
+    "geo_shape": {
+      "location": {
+        "indexed_shape": {
+          "index": "attractions",
+          "type":  "landmark",
+          "id":    "dam_square",
+          "path":  "location"
+        }
+      }
+    }
+  }
+}
+
+```
+
+
+
+
 
 
 
