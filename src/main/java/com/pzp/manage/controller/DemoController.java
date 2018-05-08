@@ -1,13 +1,13 @@
 package com.pzp.manage.controller;
 
-import com.pzp.manage.filter.CommonFilter;
-import org.apache.http.client.HttpClient;
+
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpHead;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
+import org.elasticsearch.xpack.ml.datafeed.extractor.DataExtractor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
@@ -16,7 +16,9 @@ import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
+import java.sql.Date;
 
 /**
  * <p>Project: pzp-operation-manage-system</p>
@@ -48,7 +50,7 @@ public class DemoController {
     private String eTags;
 
     private static CloseableHttpClient httpclient = HttpClients.createDefault();
-
+    // http://localhost:8888/word.txt
     // http://localhost:8888/demo/hello?name=li
     @RequestMapping(value = "/hello", method = RequestMethod.GET)
     @ResponseBody
@@ -66,7 +68,7 @@ public class DemoController {
     // http://localhost:8888/demo/getUserName
     @RequestMapping(value = "/getUserName", method = RequestMethod.GET)
     @ResponseBody
-    public String getUserName() {
+    public String getUserName(HttpServletResponse response) {
         return USER_NAME;
     }
     // http://localhost:8888/demo/getHttpInfo
