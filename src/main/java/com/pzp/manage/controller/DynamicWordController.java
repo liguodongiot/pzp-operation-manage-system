@@ -5,7 +5,6 @@ import org.ansj.domain.Result;
 import org.ansj.domain.Term;
 import org.ansj.library.DicLibrary;
 import org.ansj.splitWord.analysis.ToAnalysis;
-import org.ansj.util.MyStaticValue;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -55,5 +54,5 @@ public class DynamicWordController {
         DicLibrary.delete(DicLibrary.DEFAULT,"李国玲是");
         return System.currentTimeMillis();
     }
-    
+
 }

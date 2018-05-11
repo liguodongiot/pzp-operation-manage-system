@@ -11,3 +11,8 @@ IKAnalyzer 是一个开源的，基于java语言开发的轻量级的中文分�
 
 https://blog.csdn.net/wangyangzhizhou/article/details/71487030
 方便Lucene高版本使用IKAnalyzer分词
+
+
+
+https://blog.csdn.net/whzhaochao/article/details/50130605
+IKAnalyzer 添加扩展词库和自定义词
