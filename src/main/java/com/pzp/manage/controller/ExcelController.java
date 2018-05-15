@@ -72,7 +72,9 @@ public class ExcelController {
         }
 
         //创建HSSFWorkbook
-        HSSFWorkbook wb = ExcelUtil.getHSSFWorkbook(sheetName, title, content, null);
+        // HSSFWorkbook wb = ExcelUtil.getHSSFWorkbook(sheetName, title, content, null);
+
+        HSSFWorkbook wb = ExcelUtil.getHSSFWorkbook(sheetName, title, null);
 
         //响应到客户端
         try {

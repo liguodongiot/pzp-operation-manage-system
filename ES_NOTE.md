@@ -365,6 +365,146 @@ ik_smart: 会做最粗粒度的拆分，比如会将“中华人民共和国国�
 
 
 
+### 分析
+
+分析由分析器`analyzer`执行，分析器可以是内置分析器或者每个索引定制的自定义分析器。
+
+适当的组合自定义分析器
+
+- 零或者多个 [character filters](https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-charfilters.html)
+- 一个 [tokenizer](https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-tokenizers.html)
+- 零或多个 [token filters](https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-tokenfilters.html).
+
+
+
+自定义分析器接受以下参数
+
+| 参数                       | 描述                                       |
+| ------------------------ | ---------------------------------------- |
+| `tokenizer`              | A built-in or customised [tokenizer](https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-tokenizers.html). (必要) |
+| `char_filter`            | An optional array of built-in or customised [character filters](https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-charfilters.html). （可选） |
+| `filter`                 | An optional array of built-in or customised [token filters](https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-tokenfilters.html).（可选） |
+| `position_increment_gap` | 当索引字段是一个文本数组值。Elasticsearch 会在前一个文本的最后一个term和后一个文本的第一个term插入一个伪造的间隔 ，确保短语查询不能匹配两个不同数组元素中的这两个term.  Defaults to `100`. |
+
+
+
+```json
+# 使用内置（分词器 字符过滤器 分词过滤器）
+PUT /my_index
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "my_custom_analyzer": {
+          "type":      "custom",
+          "tokenizer": "standard",
+          "char_filter": [
+            "html_strip"
+          ],
+          "filter": [
+            "lowercase",
+            "asciifolding"
+          ]
+        }
+      }
+    }
+  }
+}
+
+POST /my_index/_analyze
+{
+  "analyzer": "my_custom_analyzer",
+  "text": "Is this <b>déjà vu</b>?"
+}
+
+# 使用自定义（分词器 字符过滤器 分词过滤器）
+PUT /my_index
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "my_custom_analyzer": {
+          "type": "custom",
+          "char_filter": [
+            "emoticons" 
+          ],
+          "tokenizer": "punctuation", 
+          "filter": [
+            "lowercase",
+            "english_stop" 
+          ]
+        }
+      },
+      "tokenizer": {
+        "punctuation": { 
+          "type": "pattern",
+          "pattern": "[ .,!?]"
+        }
+      },
+      "char_filter": {
+        "emoticons": { 
+          "type": "mapping",
+          "mappings": [
+            ":) => _happy_",
+            ":( => _sad_"
+          ]
+        }
+      },
+      "filter": {
+        "english_stop": { 
+          "type": "stop",
+          "stopwords": "_english_"
+        }
+      }
+    }
+  }
+}
+
+POST /my_index/_analyze
+{
+  "analyzer": "my_custom_analyzer",
+  "text":     "I'm a :) person, and you?"
+}
+```
+
+[Elasticsearch的 重要配置](https://www.elastic.co/guide/en/elasticsearch/reference/current/important-settings.html)
+
+[`path.data` and `path.logs`](https://www.elastic.co/guide/en/elasticsearch/reference/current/path-settings.html)
+
+默认配置在$ES_HOME目录下。升级版本时，有删除风险。
+
+`path.data` 能够设置多个路径, 所有的路径能够被使用存储数据 (属于单个分片的文件将全部存储在同一路径下)。
+
+
+
+[`cluster.name`](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster.name.html)
+
+确保不同的环境使用不同的集群名。否则你可能遇到节点加入错误的集群。
+
+
+
+
+
+### 字符过滤器
+
+Elasticsearch提供了一些内置字符过滤器能够被自定义分析器使用。
+
+- [HTML Strip Character Filter](https://www.elastic.co/guide/en/elasticsearch/reference/5.5/analysis-htmlstrip-charfilter.html)
+
+  The `html_strip` character filter strips out HTML elements like `<b>` and decodes HTML entities like `&amp;`.
+
+- [Mapping Character Filter](https://www.elastic.co/guide/en/elasticsearch/reference/5.5/analysis-mapping-charfilter.html)
+
+  The `mapping` character filter replaces any occurrences of the specified strings with the specified replacements.
+
+- [Pattern Replace Character Filter](https://www.elastic.co/guide/en/elasticsearch/reference/5.5/analysis-pattern-replace-charfilter.html)
+
+  The `pattern_replace` character filter replaces any characters matching a regular expression with the specified replacement.
+
+
+
+
+
 
 
 
@@ -420,7 +560,6 @@ curl -XPUT 'localhost:9200/my_index/_mapping/_doc?pretty' -H 'Content-Type: appl
   }
 }
 '
-
 ```
 
 
