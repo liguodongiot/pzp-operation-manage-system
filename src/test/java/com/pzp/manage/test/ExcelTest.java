@@ -5,6 +5,10 @@ import org.apache.poi.hssf.usermodel.HSSFCell;
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
@@ -71,5 +75,28 @@ public class ExcelTest {
 
     }
 
+
+
+    @Test
+    public void testReadXlsAndXlsx() throws IOException {
+        String name = "/test.xlsx";
+        //创建输入流
+        InputStream inputStream = this.getClass().getResourceAsStream(name);
+
+        //通过构造函数传参
+        Workbook workbook = name.endsWith("xls") ?new HSSFWorkbook(inputStream):new XSSFWorkbook(inputStream);
+        //获取工作表
+        Sheet sheet = workbook.getSheetAt(0);
+        //获取行,行号作为参数传递给getRow方法,第一行从0开始计算
+        Row row = sheet.getRow(1);
+        //获取单元格,row已经确定了行号,列号作为参数传递给getCell,第一列从0开始计算
+        Cell cell = row.getCell(1);
+        //获取单元格的值,即C1的值(第一行,第三列)
+        String cellValue = cell.getStringCellValue();
+        System.out.println("第一行第三列的值是："+cellValue);
+        workbook.close();
+        inputStream.close();
+
+    }
 
 }
